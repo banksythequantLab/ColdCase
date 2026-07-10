@@ -1,0 +1,7 @@
+tunnel: 50892ac9-92ff-4de9-9323-a2d80269269f
+credentials-file: C:\Users\solti\.cloudflared\50892ac9-92ff-4de9-9323-a2d80269269f.json
+protocol: quic
+ingress:
+  - hostname: coldcase.savagealgo.com
+    service: http://127.0.0.1:8060
+  - service: http_status:404
