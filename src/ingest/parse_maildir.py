@@ -87,8 +87,25 @@ class PersonCache:
 
 
 def flush(conn, people, batch):
-    """One transaction: new persons, emails, recipients."""
+    """Phase A: resolve persons (self-healing upsert). Phase B: COPY emails."""
+    addrs = {m["sender"] for m, _ in batch}
+    for m, _ in batch:
+        for kind in ("to", "cc", "bcc"):
+            addrs.update(m[kind])
+    for a in addrs:
+        people.get(a)
     persons_rows = people.take_pending()
+    if persons_rows:
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO persons (person_id, full_name, emails)"
+                " VALUES (%s,%s,%s) ON CONFLICT (full_name) DO NOTHING",
+                persons_rows)
+        names = [r[1] for r in persons_rows]
+        for pid, name in conn.execute(
+                "SELECT person_id, full_name FROM persons"
+                " WHERE full_name = ANY(%s)", (names,)):
+            people.map[name] = pid  # canonical DB ids win
     email_rows, rcpt_rows = [], []
     for m, folder in batch:
         eid = uuid.uuid4()
@@ -102,21 +119,18 @@ def flush(conn, people, batch):
                 if (pid, kind) not in seen:
                     seen.add((pid, kind))
                     rcpt_rows.append((eid, pid, kind))
-    persons_rows += people.take_pending()  # recipients may add new persons
     with conn.transaction():
         with conn.cursor() as cur:
-            if persons_rows:
-                cur.executemany(
-                    "INSERT INTO persons (person_id, full_name, emails)"
-                    " VALUES (%s,%s,%s)", persons_rows)
-            cur.executemany(
-                "INSERT INTO emails (email_id, message_id, sender_id,"
-                " sent_at, subject, body, folder, body_sha256)"
-                " VALUES (%s,%s,%s,%s,%s,%s,%s,%s)", email_rows)
+            with cur.copy("COPY emails (email_id, message_id, sender_id,"
+                          " sent_at, subject, body, folder, body_sha256)"
+                          " FROM STDIN") as cp:
+                for r in email_rows:
+                    cp.write_row(r)
             if rcpt_rows:
-                cur.executemany(
-                    "INSERT INTO email_recipients (email_id, person_id, kind)"
-                    " VALUES (%s,%s,%s)", rcpt_rows)
+                with cur.copy("COPY email_recipients (email_id, person_id,"
+                              " kind) FROM STDIN") as cp:
+                    for r in rcpt_rows:
+                        cp.write_row(r)
     return len(email_rows)
 
 
