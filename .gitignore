@@ -1,5 +1,7 @@
 .env
 data/
+ingest.log
+ingest.err.log
 __pycache__/
 *.pyc
 .venv/
