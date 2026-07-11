@@ -1,0 +1,8 @@
+reviewing 7 flagged suspects
+
+DEMOTE SKILLING JEFFREY K     0.99 -> 0.35  (neutral: The excerpts consist of routine email exchanges about s)
+DEMOTE HIRKO JOSEPH           0.99 -> 0.35  (unknown: no authored emails on these topics)
+DEMOTE KOPPER MICHAEL J       0.99 -> 0.35  (unknown: no authored emails on these topics)
+DEMOTE LAY KENNETH L          0.99 -> 0.35  (neutral: The excerpts are administrative or contextual communica)
+DEMOTE KAMINSKI WINCENTY J    0.95 -> 0.35  (neutral: The excerpts describe routine technical discussions and)
+DEMOTE LAVORATO JOHN J        0.80 -> 0.35  (neutral: The excerpt discusses staff allocation and scheduling w)

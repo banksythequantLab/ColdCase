@@ -1,0 +1,1 @@
+KAMINSKI: {'stance': 'neutral', 'confidence': 0.9, 'why': 'The excerpts consist of routine technical discussions, administrative requests, and personal communications without evidence of promoting, concealing, or objecting to questionable financial deals.', 'n_excerpts': 6} in 44s
