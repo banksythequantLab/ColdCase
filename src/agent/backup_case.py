@@ -33,6 +33,17 @@ def snapshot():
     key = f"backups/case_{ts}.json"
     s3.put_object(Bucket=os.environ["S3_BUCKET"], Key=key, Body=body,
                   ContentType="application/json")
+    # public snapshot for the AWS-hosted static dashboard (no judge data)
+    board = [{"name": r[0], "score": float(r[1]), "rationale": r[2]}
+             for r in c.execute(
+        "SELECT coalesce(p.real_name,p.full_name), s.suspicion_score,"
+        " s.rationale FROM suspects s JOIN persons p USING (person_id)"
+        " ORDER BY s.suspicion_score DESC").fetchall()]
+    pub = json.dumps({"suspects": board, "counts": counts,
+                      "updated": ts}, default=str).encode()
+    s3.put_object(Bucket=os.environ["S3_BUCKET"], Key="public/case.json",
+                  Body=pub, ContentType="application/json",
+                  CacheControl="no-cache")
     print(f"backup -> s3://{os.environ['S3_BUCKET']}/{key}"
           f" ({len(body)} bytes) counts={counts}", flush=True)
     return key

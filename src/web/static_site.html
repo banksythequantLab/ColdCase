@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Cold Case — AWS-hosted</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0d1117;color:#e6edf3;font-family:system-ui;margin:0;
+padding:2rem;max-width:720px;margin:auto}
+h1{color:#f0b429}.sub{color:#8b949e}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;
+padding:1rem;margin:.7rem 0}
+.big{font-size:1.4rem;font-weight:700;color:#f0b429;float:right}
+small{color:#8b949e}.tag{color:#8b949e;font-size:.8rem}
+</style></head><body>
+<h1>&#128373; Cold Case</h1>
+<p class="sub">Autonomous financial-crimes investigator &middot; CockroachDB
+agentic memory &middot; <span class="tag">served from Amazon S3</span></p>
+<p class="sub" id="counts">loading&hellip;</p>
+<h2 style="color:#f0b429">Suspect board</h2>
+<div id="board"></div>
+<p class="tag" id="updated"></p>
+<script>
+fetch('public/case.json?_=' + Date.now()).then(r=>r.json()).then(d=>{
+  document.getElementById('counts').textContent =
+    Object.entries(d.counts).map(([k,v])=>v+' '+k).join(' · ');
+  document.getElementById('board').innerHTML = d.suspects.map(s=>
+    '<div class="card"><span class="big">'+Number(s.score).toFixed(2)+
+    '</span><b>'+s.name+'</b><br><small>'+(s.rationale||'')+'</small></div>'
+  ).join('');
+  document.getElementById('updated').textContent = 'snapshot '+d.updated;
+});
+</script></body></html>
