@@ -23,7 +23,7 @@ total_pois = c.execute(
 
 print(f"{'SUSPECT':<26} {'SCORE':>5}  POI?")
 for name, score, poi in rows:
-    print(f"{name:<26} {score:>5.2f}  {'✓ POI' if poi else '·'}")
+    print(f"{name:<26} {score:>5.2f}  {'[POI]' if poi else '-'}")
 
 flagged = [(n, s, p) for n, s, p in rows if s >= 0.5]
 hits = sum(1 for _, _, p in flagged if p)
