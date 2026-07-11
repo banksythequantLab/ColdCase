@@ -11,10 +11,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 conn = psycopg.connect(os.environ["CRDB_ADMIN_URL"], autocommit=True)
+read_conn = psycopg.connect(os.environ["CRDB_ADMIN_URL"])  # txn for cursor
 t0 = time.time()
 
 sums, counts = {}, {}
-with conn.cursor(name="stream") as cur:
+with read_conn.cursor(name="stream") as cur:
     cur.itersize = 5000
     cur.execute("""
       SELECT e.sender_id::STRING, c.embedding::STRING

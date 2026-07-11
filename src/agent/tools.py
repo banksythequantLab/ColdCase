@@ -43,15 +43,22 @@ def semantic_search(query, k=8):
 
 
 def lookup_person(name_or_email):
-    """Find a person by (partial) name or email address."""
+    """Find a person by (partial) name or email address, any word order."""
+    import re
+    toks = [t for t in re.split(r"[\s,.@]+", name_or_email)
+            if len(t) > 1][:4]
+    if not toks:
+        return []
+    cond = " AND ".join("(full_name ILIKE %s OR real_name ILIKE %s)"
+                        for _ in toks)
+    params = [p for t in toks for p in (f"%{t}%", f"%{t}%")]
     with _conn() as c:
         rows = c.execute(
-            "SELECT person_id::STRING, full_name, real_name FROM persons"
-            " WHERE full_name ILIKE %s OR real_name ILIKE %s"
+            f"SELECT person_id::STRING, full_name, real_name FROM persons"
+            f" WHERE {cond}"
             " ORDER BY (lower(full_name) = lower(%s)) DESC,"
-            " length(full_name) LIMIT 8",
-            (f"%{name_or_email}%", f"%{name_or_email}%",
-             name_or_email)).fetchall()
+            " (real_name IS NOT NULL) DESC, length(full_name) LIMIT 8",
+            (*params, name_or_email)).fetchall()
     return [{"person_id": r[0], "address": r[1], "real_name": r[2]}
             for r in rows]
 
@@ -151,13 +158,22 @@ def timeline(person_id):
 
 # ===== case-memory writes =====
 
+def _num(v, default=0.5):
+    """Coerce model-supplied confidence like '>0.9' or '0.95' to float 0-1."""
+    import re
+    if isinstance(v, (int, float)):
+        return max(0.0, min(1.0, float(v)))
+    m = re.search(r"\d*\.?\d+", str(v))
+    return max(0.0, min(1.0, float(m.group()))) if m else default
+
+
 def record_hypothesis(case_id, statement, confidence=0.5):
     """Open a new investigative hypothesis."""
     with _conn() as c:
         hid = c.execute(
             "INSERT INTO hypotheses (case_id, statement, confidence)"
             " VALUES (%s,%s,%s) RETURNING hypothesis_id::STRING",
-            (case_id, statement, confidence)).fetchone()[0]
+            (case_id, statement, _num(confidence))).fetchone()[0]
     return {"hypothesis_id": hid}
 
 
@@ -166,7 +182,8 @@ def update_hypothesis(hypothesis_id, status, confidence):
     with _conn() as c:
         c.execute(
             "UPDATE hypotheses SET status=%s, confidence=%s, updated_at=now()"
-            " WHERE hypothesis_id=%s", (status, confidence, hypothesis_id))
+            " WHERE hypothesis_id=%s",
+            (status, _num(confidence), hypothesis_id))
     return {"ok": True}
 
 
@@ -193,5 +210,5 @@ def update_suspect(case_id, person_id, suspicion_score, rationale):
         c.execute(
             "UPSERT INTO suspects (case_id, person_id, suspicion_score,"
             " rationale, updated_at) VALUES (%s,%s,%s,%s,now())",
-            (case_id, person_id, suspicion_score, rationale[:800]))
+            (case_id, person_id, _num(suspicion_score), rationale[:800]))
     return {"ok": True}
