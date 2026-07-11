@@ -1,0 +1,14 @@
+{
+  "population": 144,
+  "pois": 18,
+  "scored": 8,
+  "threshold": 0.5,
+  "precision": 0.571,
+  "recall": 0.222,
+  "f1": 0.32,
+  "average_precision": 0.319,
+  "tp": 4,
+  "fp": 3,
+  "fn": 14,
+  "tn": 123
+}
