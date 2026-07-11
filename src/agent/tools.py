@@ -17,8 +17,18 @@ _model = None
 def _embed(text):
     global _model
     if _model is None:
-        _model = TextEmbedding(os.environ.get(
-            "EMBED_MODEL_LOCAL", "sentence-transformers/all-MiniLM-L6-v2"))
+        try:
+            sys_path = os.path.join(os.path.dirname(__file__), "..")
+            import sys as _s
+            _s.path.insert(0, sys_path)
+            import gpu_setup
+            gpu_setup.enable_cuda_dlls()
+            _model = TextEmbedding(os.environ.get(
+                "EMBED_MODEL_LOCAL", "sentence-transformers/all-MiniLM-L6-v2"),
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+        except Exception:
+            _model = TextEmbedding(os.environ.get(
+                "EMBED_MODEL_LOCAL", "sentence-transformers/all-MiniLM-L6-v2"))
     v = list(_model.embed([text]))[0]
     return "[" + ",".join(f"{x:.6f}" for x in v) + "]"
 
