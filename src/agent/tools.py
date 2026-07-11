@@ -77,7 +77,9 @@ def read_email(email_id):
 
 
 def financial_outliers(k=12):
-    """Employees with anomalous pay/stock (z-scores across all features)."""
+    """Employees with anomalous pay/stock, plus loan_advances and email
+    volume. QUIET MONEY: big loan_advances or payments with LOW sent_count
+    is the hallmark of an actor who hid behind others — investigate them."""
     with _conn() as c:
         rows = c.execute("""
           WITH s AS (SELECT avg(salary) ms, stddev(salary) ss,
@@ -88,17 +90,22 @@ def financial_outliers(k=12):
                      FROM financial_profiles)
           SELECT coalesce(p.real_name, p.full_name), p.person_id::STRING,
                  f.salary, f.bonus, f.exercised_stock_options,
-                 f.total_payments,
+                 f.total_payments, f.loan_advances,
+                 coalesce(pp.sent_count, 0),
                  greatest(abs(coalesce(f.salary,0)-s.ms)/s.ss,
                           abs(coalesce(f.bonus,0)-s.mb)/s.sb,
                           abs(coalesce(f.exercised_stock_options,0)-s.mx)/s.sx,
                           abs(coalesce(f.total_payments,0)-s.mt)/s.st) z
           FROM financial_profiles f
-          JOIN persons p ON p.person_id = f.person_id, s
+          JOIN persons p ON p.person_id = f.person_id
+          LEFT JOIN person_profiles pp ON pp.person_id = f.person_id, s
           ORDER BY z DESC LIMIT %s""", (int(k),)).fetchall()
     return [{"name": r[0], "person_id": r[1], "salary": r[2], "bonus": r[3],
              "stock_exercised": r[4], "total_payments": r[5],
-             "max_zscore": round(float(r[6]), 1)} for r in rows]
+             "loan_advances": r[6], "sent_emails": r[7],
+             "max_zscore": round(float(r[8]), 1),
+             "quiet_money": bool((r[6] or 0) > 1_000_000 and (r[7] or 0) < 50)}
+            for r in rows]
 
 
 def graph_neighbors(person_id, k=10):

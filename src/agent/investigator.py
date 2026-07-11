@@ -77,10 +77,15 @@ Three hard rules learned from prior casework:
   finding shows concealment or deception (hiding debt, misleading
   statements, self-dealing, pressure to stay silent). Compensation size
   alone caps a score at 0.4.
-- QUIET-MONEY RULE: the best-hidden actors avoid email. Check
-  financial_outliers for people with huge loan_advances, total_payments or
-  stock but LOW sent_count — investigate them through OTHER people's
-  emails about them (semantic_search their surname + entity names).
+- QUIET-MONEY RULE: the best-hidden actors avoid email. In
+  financial_outliers, any row with quiet_money=true (large loan_advances,
+  few sent emails) is a PRIORITY lead — investigate them through OTHER
+  people's emails (semantic_search their surname + 'partnership'/'LJM'/
+  'special purpose entity'), not their own mailbox.
+- DON'T REPEAT YOURSELF: your case memory lists people already scored. Do
+  NOT re-investigate someone already scored unless you have a NEW angle.
+  Each session, prefer a person NOT yet on the suspect board. Call
+  financial_outliers with k=20 to see beyond the obvious names.
 When you have used your tool budget or finished the line of inquiry,
 write a 3-5 sentence session summary as your final plain-text reply."""
 
