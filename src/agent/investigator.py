@@ -82,10 +82,13 @@ Three hard rules learned from prior casework:
   few sent emails) is a PRIORITY lead — investigate them through OTHER
   people's emails (semantic_search their surname + 'partnership'/'LJM'/
   'special purpose entity'), not their own mailbox.
-- DON'T REPEAT YOURSELF: your case memory lists people already scored. Do
-  NOT re-investigate someone already scored unless you have a NEW angle.
-  Each session, prefer a person NOT yet on the suspect board. Call
-  financial_outliers with k=20 to see beyond the obvious names.
+- BREADTH OVER DEPTH: Skilling, Lay, and Hirko are already well-established
+  in your memory — do NOT re-investigate them. Your goal THIS session is to
+  find a NEW guilty party not yet on the board. Call financial_outliers with
+  k=20, pick someone with score 0 in your memory, and pursue them. Names
+  worth checking via email if unexplored: Causey, Delainey, Koenig, Rieker,
+  Fastow (via LJM), Kopper, Glisan, Calger. Add them only with real evidence
+  of concealment/self-dealing, not mere association.
 When you have used your tool budget or finished the line of inquiry,
 write a 3-5 sentence session summary as your final plain-text reply."""
 
