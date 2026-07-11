@@ -59,6 +59,28 @@ def stats():
         })
 
 
+@app.get("/api/suspects")
+def suspects():
+    """Live suspect board + case memory counts (cheap queries)."""
+    with db() as c:
+        rows = c.execute("""
+          SELECT coalesce(p.real_name, p.full_name), s.suspicion_score,
+                 s.rationale, s.updated_at::STRING
+          FROM suspects s JOIN persons p USING (person_id)
+          ORDER BY s.suspicion_score DESC LIMIT 25""").fetchall()
+        hyp = c.execute(
+            "SELECT status, count(*) FROM hypotheses GROUP BY 1").fetchall()
+        n_find = c.execute("SELECT count(*) FROM findings").fetchone()[0]
+        n_ev = c.execute("SELECT count(*) FROM evidence").fetchone()[0]
+        n_sess = c.execute(
+            "SELECT count(*) FROM agent_sessions").fetchone()[0]
+    return JSONResponse({
+        "suspects": [{"name": r[0], "score": float(r[1]),
+                      "rationale": r[2], "updated": r[3]} for r in rows],
+        "hypotheses": {k: v for k, v in hyp},
+        "findings": n_find, "evidence": n_ev, "sessions": n_sess})
+
+
 PAGE = """<!doctype html><html><head><title>Cold Case Ops</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -87,6 +109,9 @@ ingestion &middot; live</p>
 <div class="card"><small>graph edges</small><div class="big" id="edges">?</div></div>
 </div>
 <button onclick="stats()">Refresh DB stats (costs RUs)</button>
+<h2 style="color:#f0b429;margin-top:2rem">&#128373; Suspect board</h2>
+<p class="sub" id="memstats"></p>
+<div id="board"></div>
 </body></html>"""
 
 PAGE = PAGE.replace("</body>", """<script>
@@ -105,7 +130,20 @@ async function stats(){
   document.getElementById('edges').textContent =
     s.recipient_edges.toLocaleString();
 }
+async function board(){
+  const b = await (await fetch('api/suspects')).json();
+  document.getElementById('memstats').textContent =
+    b.sessions + ' sessions · ' +
+    Object.entries(b.hypotheses).map(([k,v])=>v+' '+k).join(' · ') +
+    ' · ' + b.findings + ' findings · ' + b.evidence + ' evidence rows';
+  document.getElementById('board').innerHTML = b.suspects.map(s =>
+    '<div class="card"><b>' + s.name + '</b>' +
+    '<span style="float:right;color:#f0b429;font-size:1.3rem">' +
+    s.score.toFixed(2) + '</span><br><small>' +
+    (s.rationale||'') + '</small></div>').join('');
+}
 tick(); setInterval(tick, 5000);
+board(); setInterval(board, 30000);
 </script></body>""")
 
 
