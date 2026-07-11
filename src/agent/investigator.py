@@ -153,6 +153,11 @@ def run_session(case_id, conn):
     conn.execute("UPDATE agent_sessions SET ended_at=now(), summary=%s"
                  " WHERE session_id=%s", (summary, sid))
     print("\nSESSION SUMMARY:\n" + summary)
+    try:  # preserve evidence off-cluster at session end
+        import backup_case
+        backup_case.snapshot()
+    except Exception as e:
+        print(f"(backup skipped: {str(e)[:120]})")
 
 
 def main():
