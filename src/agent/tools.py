@@ -162,6 +162,27 @@ def similar_people(person_id, k=6):
              "distance": round(float(r[2]), 4)} for r in rows]
 
 
+def reputation(surname, k=8):
+    """What OTHERS wrote about this person near red-flag topics. Real
+    fraudsters don't incriminate themselves; corroboration comes from third
+    parties. Returns excerpts from emails NOT sent by matching people that
+    mention the surname alongside concealment/partnership/investigation terms."""
+    q = (f"{surname} partnership LJM special purpose entity conflict of "
+         f"interest investigation concealment self-dealing")
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT left(ch.text, 400),"
+            " coalesce(pp.real_name, pp.full_name), e.sent_at::STRING"
+            " FROM email_chunks ch"
+            " JOIN emails e ON e.email_id = ch.email_id"
+            " LEFT JOIN persons pp ON pp.person_id = e.sender_id"
+            " WHERE ch.text ILIKE %s"
+            " ORDER BY ch.embedding <=> %s::VECTOR LIMIT %s",
+            (f"%{surname}%", _embed(q), int(k))).fetchall()
+    return [{"excerpt": r[0], "written_by": r[1], "sent_at": r[2]}
+            for r in rows]
+
+
 def timeline(person_id):
     """Monthly email volume for a person — spot bursts and silences."""
     with _conn() as c:

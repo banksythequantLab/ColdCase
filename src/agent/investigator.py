@@ -25,7 +25,7 @@ MAX_CALLS = int(os.environ.get("MAX_TOOL_CALLS_PER_SESSION", 40))
 
 TOOL_FNS = [T.semantic_search, T.lookup_person, T.read_email,
             T.financial_outliers, T.graph_neighbors, T.bridge_nodes,
-            T.similar_people, T.timeline, T.record_hypothesis,
+            T.similar_people, T.timeline, T.reputation, T.record_hypothesis,
             T.update_hypothesis, T.record_finding, T.update_suspect]
 
 
@@ -68,11 +68,12 @@ special purpose vehicles, hidden debt, backdated deals, insider selling
 before bad news, pressure on accountants, destroyed documents.
 
 Three hard rules learned from prior casework:
-- STANCE CHECK: read the author's position in every evidence excerpt.
-  People who OBJECT to, warn about, or analyze risky structures are
-  witnesses/whistleblowers, NOT suspects. Discussing fraud != committing it.
-  If current evidence for a suspect is all analysis/warnings, LOWER their
-  score and record why.
+- CORROBORATION RULE: a person's OWN emails rarely prove guilt (fraudsters
+  are careful; whistleblowers who WARN also discuss the schemes). Before
+  scoring anyone high, call reputation(surname) to see what OTHERS wrote
+  about them. Guilt is supported when third parties describe them
+  directing/concealing deals or when investigators/press name them; mere
+  discussion or warning by the person themselves is NOT guilt.
 - CONCEALMENT GATE: never set suspicion_score above 0.6 unless a recorded
   finding shows concealment or deception (hiding debt, misleading
   statements, self-dealing, pressure to stay silent). Compensation size
