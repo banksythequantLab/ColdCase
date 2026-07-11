@@ -134,7 +134,8 @@ def run_session(case_id, conn):
     calls = 0
     while calls < MAX_CALLS:
         r = client.chat.completions.create(
-            model=model, messages=msgs, tools=schemas, max_tokens=1500)
+            model=model, messages=msgs, tools=schemas, max_tokens=1500,
+            extra_body={"keep_alive": "30m"})
         m = r.choices[0].message
         msgs.append({"role": "assistant", "content": m.content,
                      "tool_calls": [tc.model_dump() for tc in
