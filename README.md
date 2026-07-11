@@ -1,51 +1,142 @@
 # Cold Case 🕵️
 
-**An autonomous financial-crimes investigator with persistent memory, built on
-CockroachDB + AWS Bedrock.**
+**We gave an AI investigator 517,401 real Enron emails, hid the list of
+convicted executives, and asked it to solve the case.**
 
-Submission for the [CockroachDB × AWS Hackathon — Build with Agentic Memory](https://cockroachdb-ai.devpost.com/).
+Investigating blind — with no access to the answer key — the agent
+independently identified the real perpetrators. **Its top three suspects are
+all actual Enron convictions** (Jeffrey Skilling, Kenneth Lay, and Joseph
+Hirko), and it surfaced Andrew Fastow's lieutenant **Michael Kopper** through
+communication patterns alone, a name invisible in the financial records. Every
+hypothesis, finding, and piece of evidence persisted in **CockroachDB**, so the
+agent resumes seamlessly across sessions — and even across crashes.
 
-We gave an AI agent the real Enron email corpus (~500K emails) and financial
-records — with the Person-of-Interest labels hidden — and a database that never
-forgets. It investigates over multiple sessions, persisting every hypothesis,
-finding, and evidence chain in CockroachDB, then we score its suspect list
-against the real convictions.
+> Built for the [CockroachDB × AWS Hackathon](https://cockroachdb-ai.devpost.com/).
+> **[Live dashboard](https://coldcase.savagealgo.com)** ·
+> **[AWS-hosted](http://coldcase-corpus.s3-website-us-east-1.amazonaws.com)** ·
+> MIT licensed.
 
-## Architecture
+![architecture](docs/architecture.svg)
 
-- **CockroachDB Cloud** — persistent case memory: 500K+ email embeddings
-  (C-SPANN distributed vector index), entity/communication graph, transactional
-  hypothesis/finding/evidence/suspect tables
-- **CockroachDB Managed MCP Server** — read-only, audit-logged natural-language
-  access to the live case (used in dev and by judges)
-- **Amazon Bedrock** — Claude (agent cognition) + Titan Text Embeddings V2
-- **Amazon S3** — raw corpus + case reports; **ECS Fargate** — agent runtime
+---
 
-## CockroachDB tools used
+## Judge in 2 minutes
 
-1. Distributed Vector Indexing — semantic recall over email chunks + behavioral
-   person profiles
-2. Managed MCP Server — live case interrogation, read-only + audit logging
-3. Agent Skills Repo — schema design, query tuning, ops workflows during build
+1. **Open the dashboard** ([live](https://coldcase.savagealgo.com)) — see the
+   suspect board, the per-suspect memory trail, and the communication graph.
+2. **Watch it investigate:** `python src/agent/investigator.py` streams the
+   agent's tool calls as it searches emails, reads them, and records evidence.
+3. **Kill it mid-investigation** (Ctrl-C), then **restart it** — it prints
+   `resuming case…` and continues exactly where it left off. The memory was
+   never in the process; it lives in CockroachDB.
+4. **Reveal the answer key:** `python src/score_case.py` scores the agent's
+   board against the 18 sealed Persons of Interest — labels the agent's own
+   database role is **forbidden** to read (`SHOW GRANTS ON judge.poi_labels`
+   confirms `coldcase_agent` does not appear).
+
+---
+
+## Why CockroachDB — not just any database
+
+This system needs five things at once, and CockroachDB is the only store that
+gives all of them without stitching together separate systems:
+
+- **Vector search for semantic recall** — the agent "remembers" by distance
+  query over ~1M email/person embeddings (distributed C-SPANN index).
+- **ACID transactions** — evidence, findings, and suspicion scores must never
+  go inconsistent; a finding and its hashed evidence commit together or not at
+  all.
+- **Persistent agent state across crashes** — session state lives in the DB, so
+  killing the agent loses nothing and it resumes on restart.
+- **SQL joins across structured + semantic memory** — one query joins financial
+  outliers, the communication graph, and vector-retrieved emails; a bolt-on
+  vector store beside a separate SQL DB can't do this consistently.
+- **Distributed scale** — ~1M vectors and 363K graph edges today, with room to
+  grow, and the same store an always-on production agent would demand.
+
+---
+
+## How it works
+
+Each session the agent (1) **resumes its memory** from CockroachDB — open
+hypotheses, prior findings, the current suspect board; (2) **pursues one lead**
+with 13 tools: semantic search over 956,398 email embeddings, financial-outlier
+detection, communication-graph analysis, behavioural similarity, third-party
+*reputation* lookup, and full email reads; (3) **persists everything** —
+hypotheses, findings with verbatim SHA-256-hashed evidence, and updated
+suspicion scores; (4) writes a session summary and exits. Kill it anytime — the
+next session picks up exactly where it left off.
+
+The agent's brain is a local LLM (Qwen3-30B via Ollama) and embeddings run
+locally on GPU, so the pipeline is reproducible and free of per-token cost.
+**CockroachDB is the one always-on, consistent component — which is the point.**
+
+## Example finding (real output)
+
+```
+Suspect:    LAY KENNETH L        score 0.99   [confirmed POI]
+Method:     email review + financial outlier
+Evidence:   "Under Lay's employment agreement … entitled to a lump-sum
+             payment of up to $80 million upon a change of control"
+             (email 40aa37c9…, SHA-256 stored for chain of custody)
+Reasoning:  Outsized, non-performance-linked payout structured around the
+             Dynegy change-of-control window; corroborated by third-party
+             coverage, not self-authored mail.
+```
+
+## Results (blind, threshold 0.5)
+
+| metric | value |
+|---|---|
+| **precision@3** | **100%** — Skilling, Lay, Hirko all real POIs |
+| flagged precision | 4 of 7 flagged are real POIs |
+| recall | 4 / 18 POIs |
+| average precision | 0.32 |
+
+Charts: `docs/pr_curve.png`, `docs/confusion.png`, `docs/board.png`.
+
+### What surprised us
+The agent identified **Michael Kopper** — Fastow's lieutenant — *before* Fastow
+himself, because Kopper is reachable through the communication graph while
+Fastow's crimes were off-book (his money never appears in the financial data).
+The memory-driven graph search found a name the financials alone would miss.
+
+### Honest limitations
+Recall is the weak axis: the agent deepens strong cases faster than it broadens
+to new ones. It retains two false positives (Vince Kaminski, a risk officer who
+*warned against* the deals, and John Lavorato) — the genuinely hard
+"discusses-fraud vs commits-fraud" problem, which we document in
+[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) rather than hide, including a
+self-critique experiment that *failed* and taught us guilt must be corroborated
+by others' words, not the suspect's own careful mail.
+
+## CockroachDB & AWS usage
+
+**CockroachDB (3 tools):** Distributed Vector Indexing (C-SPANN) for semantic
+memory · Managed MCP Server (read-only, audit-logged) for live natural-language
+inspection (`.mcp.json`) · Agent-Skills / operational workflows incl.
+session-end backups. **AWS (2):** Amazon S3 for the corpus + case snapshots, and
+S3 static-site hosting for an AWS-served dashboard. Full mapping:
+[`docs/FOR_JUDGES.md`](docs/FOR_JUDGES.md).
 
 ## Quick start
 
-```
+```bash
 pip install -r requirements.txt
-cp .env.example .env       # fill in CRDB + AWS credentials
+cp .env.example .env            # add CRDB + AWS credentials
 psql "$CRDB_ADMIN_URL" -f sql/schema.sql
-python src/ingest/parse_maildir.py data/maildir
-python src/ingest/embed_chunks.py
-python src/agent/investigator.py --new-case "Enron"
+python src/ingest/parse_maildir.py <maildir>   # ingest
+python src/ingest/embed_chunks.py              # embed (GPU)
+python src/agent/investigator.py --new-case "Enron"   # investigate
+python src/score_case.py                       # blind score
 ```
 
-See `docs/COLD_CASE_ARCHITECTURE.md` and `docs/COLD_CASE_BUILD_PLAN.md`.
+## Where this goes next
 
-## Ground-truth isolation
-
-POI labels live in a `judge` schema the agent's service account has **zero
-grants** on. The "solved it blind" claim is enforced by RBAC, not by promise.
+The architecture is domain-agnostic — swap the corpus and it applies to SEC
+investigations, anti-money-laundering, procurement and insurance fraud, insider
+trading, or healthcare-billing fraud. Any domain where an agent must accumulate
+evidence over time and never lose it is a fit for CockroachDB-backed memory.
 
 ## License
-
-MIT
+MIT — see [LICENSE](LICENSE).

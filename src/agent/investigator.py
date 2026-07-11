@@ -119,7 +119,7 @@ def resume_context(conn, case_id):
                              for s in susp]}, indent=1)
 
 
-def run_session(case_id, conn):
+def run_session(case_id, conn, resume=True):
     client = OpenAI(base_url=os.environ["OLLAMA_URL"], api_key="ollama")
     model = os.environ["AGENT_MODEL"]
     sid = conn.execute(
@@ -127,9 +127,12 @@ def run_session(case_id, conn):
         " RETURNING session_id", (case_id,)).fetchone()[0]
     dispatch = {f.__name__: f for f in TOOL_FNS}
     schemas = [schema_for(f) for f in TOOL_FNS]
+    memory = (resume_context(conn, case_id) if resume else
+              "(no prior memory — this is a fresh investigation with no "
+              "persisted hypotheses, findings, or suspects)")
     msgs = [{"role": "system", "content": SYSTEM},
             {"role": "user", "content":
-             "CASE MEMORY:\n" + resume_context(conn, case_id) +
+             "CASE MEMORY:\n" + memory +
              f"\n\nBegin session. Tool budget: {MAX_CALLS} calls."}]
     calls = 0
     while calls < MAX_CALLS:
