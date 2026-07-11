@@ -59,6 +59,52 @@ def stats():
         })
 
 
+@app.get("/api/timeline")
+def timeline(person: str = ""):
+    """Cross-session audit trail for one suspect: the proof of memory."""
+    with db() as c:
+        if not person:
+            person = (c.execute(
+                "SELECT s.person_id::STRING FROM suspects s"
+                " ORDER BY s.suspicion_score DESC LIMIT 1").fetchone()
+                or [""])[0]
+        name = (c.execute("SELECT coalesce(real_name, full_name) FROM persons"
+                          " WHERE person_id=%s", (person,)).fetchone()
+                or ["?"])[0]
+        events = c.execute(
+            "SELECT ts, suspicion_score, rationale FROM suspect_events"
+            " WHERE person_id=%s ORDER BY ts", (person,)).fetchall()
+    return JSONResponse({"person_id": person, "name": name,
+                         "events": [{"ts": str(e[0])[:19],
+                                     "kind": "score " + f"{float(e[1]):.2f}",
+                                     "detail": (e[2] or "")[:240]}
+                                    for e in events]})
+
+
+@app.get("/api/graph")
+def graph(limit: int = 120):
+    """Top communication edges among the most-connected people; suspects
+    flagged. One-shot, cached client-side."""
+    with db() as c:
+        nodes = c.execute("""
+          SELECT p.person_id::STRING, coalesce(p.real_name, split_part(
+                 p.full_name,'@',1)), pp.pagerank,
+                 coalesce(s.suspicion_score, -1)
+          FROM person_profiles pp JOIN persons p USING (person_id)
+          LEFT JOIN suspects s ON s.person_id = p.person_id
+          ORDER BY pp.pagerank DESC LIMIT %s""", (limit,)).fetchall()
+        ids = tuple(n[0] for n in nodes)
+        edges = c.execute("""
+          SELECT src::STRING, dst::STRING, msg_count FROM comm_edges
+          WHERE src = ANY(%s) AND dst = ANY(%s) AND msg_count > 2
+          ORDER BY msg_count DESC LIMIT 500""",
+          (list(ids), list(ids))).fetchall()
+    return JSONResponse({
+        "nodes": [{"id": n[0], "name": n[1], "rank": float(n[2]),
+                   "score": float(n[3])} for n in nodes],
+        "edges": [{"s": e[0], "t": e[1], "w": e[2]} for e in edges]})
+
+
 @app.get("/api/suspects")
 def suspects():
     """Live suspect board + case memory counts (cheap queries)."""
@@ -112,6 +158,16 @@ ingestion &middot; live</p>
 <h2 style="color:#f0b429;margin-top:2rem">&#128373; Suspect board</h2>
 <p class="sub" id="memstats"></p>
 <div id="board"></div>
+<h2 style="color:#f0b429;margin-top:2rem">&#129504; Memory trail</h2>
+<p class="sub">The top suspect's case file, reconstructed across sessions from
+CockroachDB &mdash; proof the agent never forgets.</p>
+<div id="trail"></div>
+<h2 style="color:#f0b429;margin-top:2rem">&#128225; Communication network</h2>
+<p class="sub">Top-connected people; <span style="color:#f0b429">gold</span> =
+flagged suspects.</p>
+<svg id="graph" width="100%" height="460"
+ style="background:#0b0f16;border:1px solid #30363d;border-radius:10px"></svg>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 </body></html>"""
 
 PAGE = PAGE.replace("</body>", """<script>
@@ -142,8 +198,42 @@ async function board(){
     s.score.toFixed(2) + '</span><br><small>' +
     (s.rationale||'') + '</small></div>').join('');
 }
+async function trail(){
+  const t = await (await fetch('api/timeline')).json();
+  document.getElementById('trail').innerHTML =
+    '<div class="card"><b>'+t.name+'</b><br>' +
+    t.events.map(e=>'<div style="border-left:2px solid #f0b429;'+
+      'padding:.3rem 0 .3rem .8rem;margin:.5rem 0"><small style="color:#8b949e">'+
+      e.ts+'</small> &middot; <b style="color:#f0b429">'+e.kind+'</b><br><small>'+
+      (e.detail||'')+'</small></div>').join('') + '</div>';
+}
+async function drawGraph(){
+  const g = await (await fetch('api/graph')).json();
+  const svg = d3.select('#graph'), W = svg.node().clientWidth, H = 460;
+  svg.selectAll('*').remove();
+  const sim = d3.forceSimulation(g.nodes)
+    .force('link', d3.forceLink(g.edges).id(d=>d.id).distance(40).strength(.3))
+    .force('charge', d3.forceManyBody().strength(-30))
+    .force('center', d3.forceCenter(W/2, H/2));
+  const link = svg.append('g').attr('stroke','#30363d').attr('stroke-opacity',.5)
+    .selectAll('line').data(g.edges).join('line')
+    .attr('stroke-width', d=>Math.min(3, Math.log(d.w)));
+  const node = svg.append('g').selectAll('circle').data(g.nodes).join('circle')
+    .attr('r', d=> d.score>=0 ? 7 : 3+d.rank*400)
+    .attr('fill', d=> d.score>=0.5 ? '#f0b429' : d.score>=0 ? '#d97706' : '#3b5573')
+    .attr('stroke','#0b0f16');
+  node.append('title').text(d=> d.name + (d.score>=0?' (suspect '+d.score.toFixed(2)+')':''));
+  sim.on('tick', ()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>Math.max(6,Math.min(W-6,d.x)))
+        .attr('cy',d=>Math.max(6,Math.min(H-6,d.y)));
+  });
+}
 tick(); setInterval(tick, 5000);
 board(); setInterval(board, 30000);
+trail(); setInterval(trail, 30000);
+setTimeout(drawGraph, 800);
 </script></body>""")
 
 

@@ -211,4 +211,8 @@ def update_suspect(case_id, person_id, suspicion_score, rationale):
             "UPSERT INTO suspects (case_id, person_id, suspicion_score,"
             " rationale, updated_at) VALUES (%s,%s,%s,%s,now())",
             (case_id, person_id, _num(suspicion_score), rationale[:800]))
+        c.execute(
+            "INSERT INTO suspect_events (case_id, person_id,"
+            " suspicion_score, rationale) VALUES (%s,%s,%s,%s)",
+            (case_id, person_id, _num(suspicion_score), rationale[:800]))
     return {"ok": True}
