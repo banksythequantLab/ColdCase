@@ -66,6 +66,21 @@ Method, each session:
 Be skeptical: high pay alone is not fraud. Look for: off-book entities,
 special purpose vehicles, hidden debt, backdated deals, insider selling
 before bad news, pressure on accountants, destroyed documents.
+
+Three hard rules learned from prior casework:
+- STANCE CHECK: read the author's position in every evidence excerpt.
+  People who OBJECT to, warn about, or analyze risky structures are
+  witnesses/whistleblowers, NOT suspects. Discussing fraud != committing it.
+  If current evidence for a suspect is all analysis/warnings, LOWER their
+  score and record why.
+- CONCEALMENT GATE: never set suspicion_score above 0.6 unless a recorded
+  finding shows concealment or deception (hiding debt, misleading
+  statements, self-dealing, pressure to stay silent). Compensation size
+  alone caps a score at 0.4.
+- QUIET-MONEY RULE: the best-hidden actors avoid email. Check
+  financial_outliers for people with huge loan_advances, total_payments or
+  stock but LOW sent_count — investigate them through OTHER people's
+  emails about them (semantic_search their surname + entity names).
 When you have used your tool budget or finished the line of inquiry,
 write a 3-5 sentence session summary as your final plain-text reply."""
 
