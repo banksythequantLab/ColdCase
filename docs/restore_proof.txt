@@ -1,0 +1,6 @@
+Restoring snapshot: s3://coldcase-corpus/backups/case_20260712T133253Z.json
+Tables recovered: {'investigations': 4, 'hypotheses': 35, 'findings': 46, 'evidence': 83, 'suspects': 17, 'suspect_events': 33, 'agent_sessions': 49}
+
+Chain-of-custody check on 83 evidence rows:
+  verified: 83   mismatched: 0   unhashed/skipped: 0
+RESTORE OK - snapshot is complete and evidence is intact.

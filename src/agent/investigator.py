@@ -23,7 +23,7 @@ import tools as T
 load_dotenv()
 MAX_CALLS = int(os.environ.get("MAX_TOOL_CALLS_PER_SESSION", 40))
 
-TOOL_FNS = [T.semantic_search, T.lookup_person, T.read_email,
+TOOL_FNS = [T.semantic_search, T.hybrid_search, T.lookup_person, T.read_email,
             T.financial_outliers, T.graph_neighbors, T.bridge_nodes,
             T.similar_people, T.timeline, T.reputation, T.record_hypothesis,
             T.update_hypothesis, T.record_finding, T.update_suspect]

@@ -1,2 +1,4 @@
 qwen3:30b-a3b-instruct-2507-q4_K_M       3.6s  tool_call=yes
 qwen3:8b                                47.0s  tool_call=NO
+qwen3:4b                               ERROR Request timed out.
+mistral:7b                             ERROR Request timed out.

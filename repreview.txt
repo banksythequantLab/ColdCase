@@ -1,0 +1,7 @@
+KEEP   SKILLING JEFFREY K     0.99 -> 0.99  [principal] Fastow is described as resigning due to conflict-of-interest concerns 
+DEMOTE HIRKO JOSEPH           0.99 -> 0.40  [peripheral] Mentioned in email chains as a recipient or participant in routine com
+KEEP   KOPPER MICHAEL J       0.99 -> 0.99  [principal] Described as a 'principal' of LJM2 and manager of Chewco's general par
+DEMOTE LAY KENNETH L          0.99 -> 0.40  [peripheral] Mentioned in passing in emails about conflicts of interest and financi
+DEMOTE KAMINSKI WINCENTY J    0.95 -> 0.40  [peripheral] Described as assisting with document retrieval and reviewing agreement
+DEMOTE LAVORATO JOHN J        0.80 -> 0.40  [peripheral] Described only in routine communications and risk assessments, not as 
+DEMOTE FREVERT MARK A         0.70 -> 0.40  [peripheral] Mentioned in emails related to litigation and compliance, but only as 

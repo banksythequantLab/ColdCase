@@ -169,6 +169,44 @@ python src/agent/investigator.py --new-case "Enron"   # investigate
 python src/score_case.py                       # blind score
 ```
 
+## Real-world impact & cost
+
+E-discovery is a multi-billion-dollar industry where a single large matter runs
+**$100k–$1M+** in attorney and contract-reviewer time and takes **months** to
+first actionable intelligence. Cold Case's approach — an agent that investigates
+autonomously and accumulates evidence in a persistent store — targets the
+expensive first-pass triage: surfacing the people and threads worth human
+attention.
+
+| | Traditional first-pass review | Cold Case |
+|---|---|---|
+| Cost | $100k+ (reviewers + counsel) | ≈ compute only (local LLM + CockroachDB) |
+| Time to a ranked suspect list | weeks–months | hours of unattended runtime |
+| Explainability | reviewer notes | every score backed by hashed, queryable evidence |
+
+Honest deployment blockers (not hand-waved): attorney–client privilege
+filtering, court-admissible chain-of-custody certification, and regulatory
+acceptance of AI-surfaced findings — which is why this is a **triage assistant
+that flags for human review**, not an autonomous accuser. The architecture is
+domain-agnostic; the same memory + agent pattern applies to SEC investigations,
+anti-money-laundering, procurement and insurance fraud, and insider trading.
+Modernizing to current data (derivatives, SPACs, crypto flows, Slack/Teams)
+means adding source parsers — the CockroachDB memory layer is unchanged.
+
+## Deep dive & proofs
+
+- **Provable blindness:** [`docs/rbac_proof.txt`](docs/rbac_proof.txt) — the
+  agent's DB role denied on `judge.poi_labels` (`python src/prove_rbac.py`).
+- **Disaster recovery:** [`docs/restore_proof.txt`](docs/restore_proof.txt) —
+  restore a case snapshot from S3 and verify all evidence SHA-256 hashes
+  (`python src/restore_verify.py`).
+- **The whistleblower dilemma:** [`docs/CASE_KAMINSKI.md`](docs/CASE_KAMINSKI.md)
+  — why the evidence store preserving *contradiction* is the point.
+- **Hybrid vector+graph search:** `hybrid_search` fuses the C-SPANN vector
+  index with PageRank in one SQL query, boosting relevant mail from central
+  actors over peripheral outsiders.
+- **All experiments:** [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) (E1–E5).
+
 ## Where this goes next
 
 The architecture is domain-agnostic — swap the corpus and it applies to SEC

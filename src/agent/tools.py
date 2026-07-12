@@ -52,6 +52,43 @@ def semantic_search(query, k=8):
              "sent_at": r[3]} for r in rows]
 
 
+def hybrid_search(query, k=8, graph_weight=0.4):
+    """Rank emails by BOTH semantic relevance AND the sender's network
+    influence (a single SQL join of the C-SPANN vector index with the
+    PageRank graph). Surfaces relevant mail from central actors that pure
+    vector search would bury. graph_weight in [0,1] trades the two."""
+    gw = max(0.0, min(1.0, float(graph_weight)))
+    with _conn() as c:
+        rows = c.execute("""
+          WITH near AS (
+            SELECT ch.email_id, e.sender_id,
+                   (ch.embedding <=> %s::VECTOR) AS dist
+            FROM email_chunks ch JOIN emails e ON e.email_id = ch.email_id
+            ORDER BY dist LIMIT 120),
+          hits AS (
+            SELECT email_id, sender_id, min(dist) AS dist
+            FROM near GROUP BY email_id, sender_id)
+          SELECT coalesce(p.real_name, p.full_name),
+                 left(e.body, 300), h.email_id::STRING,
+                 (1 - h.dist) * (1 - %s) +
+                 coalesce(pp.pagerank, 0) * 3000 * %s AS score
+          FROM hits h
+          JOIN emails e ON e.email_id = h.email_id
+          LEFT JOIN persons p ON p.person_id = h.sender_id
+          LEFT JOIN person_profiles pp ON pp.person_id = h.sender_id
+          ORDER BY score DESC LIMIT %s""",
+          (_embed(query), gw, gw, int(k))).fetchall()
+    out, seen = [], set()
+    for r in rows:
+        key = (r[0], (r[1] or "")[:60])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"sender": r[0], "excerpt": r[1], "email_id": r[2],
+                    "combined_score": round(float(r[3]), 4)})
+    return out[:int(k)]
+
+
 def lookup_person(name_or_email):
     """Find a person by (partial) name or email address, any word order."""
     import re

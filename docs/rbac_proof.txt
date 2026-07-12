@@ -1,0 +1,14 @@
+Connecting as the agent role (coldcase_agent)...
+
+[1] Agent CAN read its own case memory:
+    SELECT count(*) FROM suspects  ->  17 rows  (allowed)
+
+[2] Agent CAN read the evidence corpus:
+    SELECT count(*) FROM financial_profiles  ->  144 rows  (allowed)
+
+[3] Agent attempts to read the SEALED ground truth:
+    SELECT * FROM judge.poi_labels
+    ->  DENIED: user coldcase_agent does not have USAGE privilege on schema judge
+
+    The 18 POI labels are unreadable by the agent. The
+    investigation is provably blind - enforced by RBAC, not trust.
