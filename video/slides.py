@@ -78,11 +78,16 @@ SLIDES = [
     <p class="mono" style="font-size:52px;color:#3fb950;margin-top:60px">&gt; resuming case&hellip; &#10003;</p>
     <p style="font-size:40px">The memory was never in the process. It was always in
     <b class=blu>CockroachDB</b>.</p>"""),
-    # 5 - close
-    wrap("""<div class=kick>Found via the communication graph alone</div>
-    <h2>It surfaced <span class=gold>Michael Kopper</span> &mdash; Fastow's
-    lieutenant &mdash; a name invisible in the financial records.</h2>
-    <p style="font-size:56px;margin-top:70px">Agents that <b>think</b>, <b>act</b>,
-    and <b class=gold>remember</b>.</p>
-    <p style="font-size:38px;color:#8b949e">github.com/banksythequantLab/ColdCase &middot; coldcase.savagealgo.com</p>"""),
+    # 5 - close: speed + attorney-hours + tagline
+    wrap("""<div class=kick>517,401 documents &middot; no answer key</div>
+    <h2>In under <span class=gold>9 hours</span> of compute, it did the work of
+    <span class=grn>thousands of attorney-hours</span></h2>
+    <div class=row style="margin-top:56px">
+      <div class=stat><div class="n gold">~8 hrs</div><div class=l>agent compute, 44 sessions</div></div>
+      <div class=stat><div class="n grn">8,600+</div><div class=l>equivalent attorney-hours</div></div>
+      <div class=stat><div class="n blu">1000&times;</div><div class=l>faster first-pass review</div></div>
+    </div>
+    <p style="font-size:52px;margin-top:56px"><b class=gold>CockroachDB turns a
+    database into an e-discovery tool.</b></p>
+    <p style="font-size:34px;color:#8b949e">github.com/banksythequantLab/ColdCase &middot; coldcase.savagealgo.com</p>"""),
 ]

@@ -40,10 +40,11 @@ SCENES = [
      "reprocessing a single document, because the memory was never in the "
      "process. It was always in CockroachDB."),
     ("shot_graph.png",
-     "It even surfaced Michael Kopper, Andrew Fastow's lieutenant, through "
-     "the communication graph alone. A name invisible in the financial "
-     "records. Agents that think, act, and remember. That is what turns a "
-     "chatbot into an investigator."),
+     "It surfaced Michael Kopper, Fastow's lieutenant, through the "
+     "communication graph alone. And it worked through five hundred thousand "
+     "documents in under nine hours of compute. The equivalent of thousands "
+     "of attorney hours of first-pass review. CockroachDB turns a database "
+     "into an e-discovery tool."),
 ]
 
 
