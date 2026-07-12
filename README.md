@@ -95,6 +95,23 @@ Reasoning:  Outsized, non-performance-linked payout structured around the
 
 Charts: `docs/pr_curve.png`, `docs/confusion.png`, `docs/board.png`.
 
+### Ablation — does persistent memory actually matter?
+
+We ran the same investigator with and without CockroachDB memory. Without it,
+each session starts blind and cannot build on the last.
+
+| configuration | precision@3 | real POIs found |
+|---|---|---|
+| **No memory** (best of 3 independent sessions) | **0%** | **0 / 18** |
+| **CockroachDB memory** (accumulated over sessions) | **100%** | **4 / 18** |
+
+![ablation](docs/ablation.png)
+
+Without memory the agent re-runs the same opening move every session and
+fixates on a single (wrong) lead — it has no way to know what it already tried,
+so it never advances. Persistent memory is not an implementation detail here;
+it is the difference between finding the real perpetrators and finding nothing.
+
 ### What surprised us
 The agent identified **Michael Kopper** — Fastow's lieutenant — *before* Fastow
 himself, because Kopper is reachable through the communication graph while

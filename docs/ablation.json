@@ -1,0 +1,39 @@
+{
+  "memory": {
+    "precision@3": 1.0,
+    "flagged": 7,
+    "pois_found": 4,
+    "recall": 0.222,
+    "sessions": 34
+  },
+  "no_memory_runs": [
+    {
+      "precision@3": 0.0,
+      "flagged": 1,
+      "pois_found": 0,
+      "recall": 0.0
+    },
+    {
+      "precision@3": 0.0,
+      "flagged": 1,
+      "pois_found": 0,
+      "recall": 0.0
+    },
+    {
+      "precision@3": 0.0,
+      "flagged": 1,
+      "pois_found": 0,
+      "recall": 0.0
+    }
+  ],
+  "no_memory_best": {
+    "precision@3": 0.0,
+    "flagged": 1,
+    "pois_found": 0,
+    "recall": 0.0
+  },
+  "no_memory_avg": {
+    "precision@3": 0.0,
+    "avg_pois": 0.0
+  }
+}
