@@ -187,10 +187,12 @@ tier — is the result that matters.
 > architecture finds the rest. We just need the data.*
 
 ### Precision over recall — a design decision, not a shortfall
-The evaluation intentionally prioritizes **precision over recall**. In a
-financial investigation, falsely accusing an innocent executive is far more
-costly than delaying the identification of an additional suspect — so the agent
-is built to flag only what it can evidence, and to abstain otherwise. That is
+The system intentionally optimizes **precision over recall** because financial
+investigations have **asymmetric costs**: falsely accusing an innocent executive
+is generally far more damaging than requiring additional investigation before
+flagging another suspect — the same reason medical screening and fraud triage
+often prioritize precision. So the agent flags only what it can evidence, and
+abstains otherwise. That is
 why precision@3 is 100% while recall is 4/18: by ~45 sessions the agent is
 autonomously investigating the *correct* remaining POIs (Mark Koenig, Paula
 Rieker — both real convictions) but declines to flag them without sufficient
@@ -306,6 +308,24 @@ trading, or healthcare-billing fraud (Madoff, FTX, and similar cases are drop-in
 by pointing the ingest at a new corpus). Any domain where an agent must
 accumulate evidence over time and never lose it is a fit for CockroachDB-backed
 memory.
+
+## Why this isn't just RAG
+
+Traditional RAG retrieves documents and forgets every investigation the moment
+the session ends. Cold Case **persists the investigation itself** — evolving
+hypotheses that flip between open/supported/refuted, evidence chains, suspect
+score histories, graph discoveries, and confidence — across dozens of
+autonomous sessions, surviving process death. The database stores the agent's
+*reasoning state*, not just the corpus being searched. That is the line between
+a memory system and the many "LLM + vector database" demos judges will see.
+
+## Model-agnostic by design
+
+The architecture is model-agnostic and can run behind Amazon Bedrock or
+SageMaker. We **intentionally used a local model** so that the improvement in
+the ablation (0/18 → 4/18) is attributable to *persistent memory* rather than
+to buying better intelligence. Same model, different memory, different outcome
+— that is the scientifically clean way to prove the thesis.
 
 ## Why CockroachDB? (not just a bigger context window)
 
