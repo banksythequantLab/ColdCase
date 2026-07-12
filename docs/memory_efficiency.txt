@@ -1,0 +1,13 @@
+corpus: 517,401 emails, ~239M tokens total
+agent context per session: ~27,000 tokens
+sessions run: 49
+
+The agent reasons over ~27K tokens per session
+while its memory spans ~239M tokens - a
+~8,841x reduction vs. loading the corpus into context,
+and it never re-reads a document it has already processed.
+
+A naive 'stuff it all in the context window' approach is
+~239M tokens - 1193x over even a
+200K-token frontier context window. Persistent memory is not an
+optimization here; it is the only way the task is possible.

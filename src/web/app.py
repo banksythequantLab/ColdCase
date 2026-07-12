@@ -192,6 +192,28 @@ def graph(limit: int = 120):
                   for e in edges]})
 
 
+@app.get("/api/leads")
+def leads():
+    """Unexplored high-centrality people not yet on the suspect board -
+    the agent's next investigative leads (addresses the recall frontier)."""
+    with db() as c:
+        mc = main_case(c)
+        rows = c.execute("""
+          SELECT coalesce(p.real_name, p.full_name), pp.pagerank,
+                 pp.betweenness, coalesce(fp.person_id IS NOT NULL, false)
+          FROM person_profiles pp
+          JOIN persons p USING (person_id)
+          LEFT JOIN financial_profiles fp USING (person_id)
+          WHERE pp.person_id NOT IN (
+              SELECT person_id FROM suspects WHERE case_id=%s)
+            AND p.full_name ILIKE '%%@enron.com'
+          ORDER BY pp.betweenness DESC LIMIT 8""", (mc,)).fetchall()
+    return JSONResponse({"leads": [
+        {"name": r[0], "pagerank": round(float(r[1]), 5),
+         "betweenness": round(float(r[2]), 5), "has_financials": r[3]}
+        for r in rows]})
+
+
 @app.get("/api/suspects")
 def suspects():
     """Live suspect board + case memory counts (cheap queries)."""
@@ -287,6 +309,10 @@ text-decoration:none">
 <h2><svg class="ic ic-h2"><use href="#i-scan"/></svg>Suspect board</h2>
 <p class="sub" id="memstats"></p>
 <div id="board"></div>
+<h2><svg class="ic ic-h2"><use href="#i-scan"/></svg>Next leads</h2>
+<p class="sub">Unexplored high-centrality people not yet flagged - where the
+agent would look next. Recall is bounded by evidence, not by candidates.</p>
+<div id="leads"></div>
 <h2><svg class="ic ic-h2"><use href="#i-mem"/></svg>Memory trail</h2>
 <p class="sub">The top suspect's case file, reconstructed across sessions from
 CockroachDB &mdash; proof the agent never forgets.</p>
@@ -412,8 +438,18 @@ async function drawGraph(){
     label.attr('x',d=>d.x).attr('y',d=>d.y-rOf(d)-5);
   });
 }
+async function leads(){
+  const d = await (await fetch('api/leads')).json();
+  document.getElementById('leads').innerHTML = d.leads.map(l=>
+    '<div class="card" style="display:flex;justify-content:space-between;'+
+    'align-items:center;padding:.7rem 1.1rem"><span style="font-weight:600">'+
+    l.name.replace('@enron.com','')+'</span><small>betweenness '+
+    l.betweenness.toFixed(4)+(l.has_financials?' · exec':'')+'</small></div>'
+  ).join('');
+}
 tick(); setInterval(tick, 5000);
 board(); setInterval(board, 30000);
+leads(); setInterval(leads, 60000);
 trail(); setInterval(trail, 30000);
 setTimeout(drawGraph, 800);
 </script></body>""")

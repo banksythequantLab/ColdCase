@@ -266,6 +266,13 @@ sessions that must survive process death. It needs, simultaneously:
 - **SQL joins** across all of the above in a single query (e.g. the
   `hybrid_search` tool fuses the vector index with PageRank).
 
+**The numbers make it concrete** (`src/memory_efficiency.py`): the corpus is
+~239M tokens. The agent reasons over ~27K tokens per session while its *memory*
+spans all 239M — a **~8,800× reduction**, and **~1,193× larger than even a
+200K-token frontier context window**. It never re-reads a document it has
+already processed. Persistent memory is not an optimization here; it is the
+only way the task is possible.
+
 Persistent transactional memory, vector search, graph relationships, and
 durable state are **fundamental to the system — not implementation details.**
 That is precisely what CockroachDB provides in one distributed store, and it is
