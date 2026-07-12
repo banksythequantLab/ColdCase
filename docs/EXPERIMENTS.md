@@ -82,3 +82,25 @@ post-hoc re-score. Robust scoring needs to *combine* signals — reputation,
 financial anomalies, finding strength, graph position — weighted by corpus
 coverage. That combination is the real open problem, and it's exactly what a
 persistent, multi-signal memory store like CockroachDB is built to support.
+
+
+## E5. Recall plateau - the agent is conservative by design
+
+After ~45 sessions recall stabilises at **4/18** with **100% precision@3** and
+no new false positives. In the later sessions the agent is now autonomously
+investigating the *correct* remaining POIs - it looks up **Mark Koenig** and
+**Paula Rieker** (both real Enron convictions) - but declines to add them to
+the board because it cannot find sufficient concealment evidence in the email
+corpus to cross the 0.5 threshold.
+
+This is the intended precision/recall tradeoff, not a bug: the concealment gate
+and corroboration rule stop the agent flagging people on association or thin
+circumstantial evidence. Many of the 18 labelled POIs (Fastow, Koenig, Rieker)
+have little incriminating content in *this* email corpus - their culpability
+lives in financial filings, testimony, and press. An agent that flagged them
+anyway would be guessing.
+
+**Takeaway:** recall here is bounded by corpus coverage and a deliberately high
+evidence bar, not by the memory architecture. Raising it without wrecking
+precision needs richer sources (filings, testimony) joined to the email memory
+- exactly the multi-source, transactional workload CockroachDB is built for.
