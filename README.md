@@ -1,5 +1,7 @@
 # Cold Case 🕵️
 
+> Part of the **[Nota.Lawyer CockroachDB E-Discovery Suite](https://github.com/banksythequantLab/ediscovery-suite)** — five agents, one entwined memory.
+
 Cold Case is an autonomous financial-crimes investigator that treats
 **CockroachDB as long-term memory, not temporary storage.** We gave it over
 half a million real Enron emails, hid the historical convictions, and asked it
