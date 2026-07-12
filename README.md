@@ -323,6 +323,28 @@ human investigator cross-references discovery documents against filings. One
 store, two sources, joined by vector search and SQL — not two systems bolted
 together.
 
+## The ACID test: why not just a vector store
+
+A vector database indexes static embeddings fine. But agentic memory is
+**written concurrently** — multiple agent loops (and, in the sibling
+*Deposition Deconstruct* tool, a fleet of parallel fact-checkers) update the
+same shared case state at once. That is a transaction-isolation problem, and
+it's where a vector store or naive KV store silently corrupts your truth.
+
+`src/acid_demo.py` proves it against the live cluster — 10 concurrent agents
+each recording 20 corroborations to one shared row (expected 200):
+
+| mode | final count | lost updates |
+|---|---|---|
+| Naive read-modify-write | 31 | **169 silently lost** |
+| CockroachDB `SERIALIZABLE` | 200 | **0** |
+
+Without serialization, 85% of the writes vanish to race conditions. With
+CockroachDB, conflicting transactions are detected and retried, so **every
+concurrent write is preserved**. The memory is a *transactional ledger of
+truths*, not just an index — and that is the capability a bolted-together
+"Pinecone + Postgres + Redis" stack cannot give you in one place.
+
 ## Why this isn't just RAG
 
 Traditional RAG retrieves documents and forgets every investigation the moment

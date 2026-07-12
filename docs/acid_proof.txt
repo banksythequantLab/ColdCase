@@ -1,0 +1,9 @@
+10 concurrent agents each record 20 corroborations to ONE shared row (expected total 200):
+
+Naive read-modify-write:           final=31    expected=200  lost_updates=169  (2.0s)
+CockroachDB SERIALIZABLE:          final=200   expected=200  lost_updates=0    (8.9s)
+
+Naive mode silently LOST 169 updates to race conditions.
+SERIALIZABLE isolation lost ZERO - every concurrent write is
+preserved. The memory is a transactional ledger of truths,
+not just an index. This is the CockroachDB difference.
