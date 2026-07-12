@@ -17,6 +17,8 @@ rows = c.execute("""
   FROM suspects s
   JOIN persons p USING (person_id)
   LEFT JOIN judge.poi_labels j ON j.person_id = s.person_id
+  WHERE s.case_id = (SELECT case_id FROM investigations
+                     WHERE title NOT LIKE 'ablation%' ORDER BY created_at LIMIT 1)
   ORDER BY s.suspicion_score DESC""").fetchall()
 total_pois = c.execute(
     "SELECT count(*) FROM judge.poi_labels WHERE is_poi").fetchone()[0]

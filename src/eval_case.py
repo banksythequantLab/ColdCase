@@ -28,6 +28,8 @@ rows = c.execute("""
   FROM financial_profiles f
   JOIN persons p USING (person_id)
   LEFT JOIN suspects s ON s.person_id = f.person_id
+     AND s.case_id = (SELECT case_id FROM investigations
+                      WHERE title NOT LIKE 'ablation%' ORDER BY created_at LIMIT 1)
   LEFT JOIN judge.poi_labels j ON j.person_id = f.person_id""").fetchall()
 names = [r[0] for r in rows]
 y_score = np.array([float(r[1]) for r in rows])
