@@ -4,6 +4,15 @@
 suggest improvements. It is a complete, self-contained account: you do not need
 to see the code to evaluate it. It is deliberately honest about weaknesses.*
 
+**Links**
+- Code (MIT): https://github.com/banksythequantLab/ColdCase
+- Live dashboard: https://coldcase.savagealgo.com
+- Memory replay: https://coldcase.savagealgo.com/replay
+- AWS-hosted board: http://coldcase-corpus.s3-website-us-east-1.amazonaws.com
+- Zero-setup offline demo: `demo/index.html` in the repo
+- Full criterion-mapped judge guide: `docs/FOR_JUDGES.md`
+- Experiment log (incl. failures): `docs/EXPERIMENTS.md`
+
 ---
 
 ## 1. What was built, in one paragraph
