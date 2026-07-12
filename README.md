@@ -34,6 +34,22 @@ the financial records.
 
 ![architecture](docs/architecture.svg)
 
+### Screenshots
+
+The live suspect board — the agent's conclusions, each score backed by evidence:
+
+![dashboard](docs/shot_dashboard.png)
+
+The **memory replay** — scrub through the investigation's history and read the
+agent's actual hypotheses, findings, and evidence at each point in time:
+
+![memory replay](docs/shot_replay.png)
+
+The communication network the agent queries to find hidden intermediaries
+(gold = flagged suspects, sized by influence):
+
+![network graph](docs/shot_graph.png)
+
 ---
 
 ## Judge in 2 minutes
