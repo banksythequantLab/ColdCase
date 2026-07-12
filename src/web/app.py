@@ -17,10 +17,53 @@ LOG = os.path.join(os.path.dirname(__file__), "..", "..", "ingest.log")
 TOTAL_EST = 517000
 
 app = FastAPI(title="Cold Case Ops")
+_replay_cache = None
 
 
 def db():
     return psycopg.connect(os.environ["CRDB_ADMIN_URL"])
+
+
+def build_replay():
+    """Load timestamped S3 case snapshots into replay frames (cached)."""
+    import json
+    import boto3
+    s3 = boto3.client(
+        "s3", region_name=os.environ["AWS_REGION"],
+        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"])
+    bucket = os.environ["S3_BUCKET"]
+    keys = sorted(o["Key"] for o in s3.list_objects_v2(
+        Bucket=bucket, Prefix="backups/").get("Contents", []))
+    with db() as c:
+        names = {str(r[0]): r[1] for r in c.execute(
+            "SELECT person_id, coalesce(real_name, full_name)"
+            " FROM persons WHERE person_id IN"
+            " (SELECT person_id FROM suspects)").fetchall()}
+    frames = []
+    for k in keys:
+        d = json.loads(s3.get_object(Bucket=bucket, Key=k)["Body"].read())
+        board = sorted(d.get("suspects", []),
+                       key=lambda x: -float(x["suspicion_score"]))
+        frames.append({
+            "ts": k.split("case_")[1].replace(".json", ""),
+            "hypotheses": len(d.get("hypotheses", [])),
+            "findings": len(d.get("findings", [])),
+            "evidence": len(d.get("evidence", [])),
+            "board": [{"name": names.get(str(s["person_id"]),
+                                         str(s["person_id"])[:8]),
+                       "score": round(float(s["suspicion_score"]), 2),
+                       "why": (s.get("rationale") or "")[:200]}
+                      for s in board]})
+    return frames
+
+
+@app.get("/api/replay")
+def replay():
+    global _replay_cache
+    if _replay_cache is None:
+        _replay_cache = build_replay()
+    return JSONResponse(_replay_cache)
 
 
 @app.get("/api/progress")
@@ -237,6 +280,65 @@ setTimeout(drawGraph, 800);
 </script></body>""")
 
 
+REPLAY = """<!doctype html><html><head><meta charset="utf-8">
+<title>Cold Case — Memory Replay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0d1117;color:#e6edf3;font-family:system-ui;margin:0;
+padding:2rem;max-width:760px;margin:auto}
+h1{color:#f0b429}.sub{color:#8b949e}a{color:#58a6ff}
+.counts{display:flex;gap:1rem;margin:1rem 0}
+.counts div{background:#161b22;border:1px solid #30363d;border-radius:8px;
+padding:.6rem 1rem;flex:1;text-align:center}
+.counts b{font-size:1.5rem;color:#f0b429;display:block}
+input[type=range]{width:100%;accent-color:#f0b429}
+.row{display:flex;align-items:center;gap:.6rem;margin:.35rem 0;
+background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem .8rem;
+transition:all .4s}
+.row.new{border-color:#3fb950;box-shadow:0 0 0 1px #3fb950}
+.bar{height:10px;border-radius:5px;background:#f0b429;transition:width .5s}
+.nm{width:150px;font-weight:600}.sc{width:44px;color:#f0b429;font-weight:700}
+</style></head><body>
+<h1>&#129504; Memory Replay</h1>
+<p class="sub">Scrub through the investigation's history, reconstructed from
+CockroachDB case snapshots stored in S3. Watch suspects appear and rise as the
+agent accumulates evidence across sessions. <a href="/">&larr; ops dashboard</a></p>
+<div class="counts">
+ <div><b id="fi">-</b>frame</div><div><b id="hy">-</b>hypotheses</div>
+ <div><b id="fn">-</b>findings</div><div><b id="ev">-</b>evidence</div>
+</div>
+<input type="range" id="scrub" min="0" value="0" step="1">
+<p class="sub" id="ts"></p>
+<div id="board"></div>
+<script>
+let F=[];
+fetch('api/replay').then(r=>r.json()).then(d=>{
+  F=d; const s=document.getElementById('scrub');
+  s.max=F.length-1; s.value=F.length-1;
+  s.oninput=()=>render(+s.value); render(F.length-1);
+});
+function render(i){
+  const f=F[i], prev=i>0?F[i-1]:{board:[]};
+  const pn=new Set(prev.board.map(b=>b.name));
+  document.getElementById('fi').textContent=(i+1)+'/'+F.length;
+  document.getElementById('hy').textContent=f.hypotheses;
+  document.getElementById('fn').textContent=f.findings;
+  document.getElementById('ev').textContent=f.evidence;
+  document.getElementById('ts').textContent='snapshot '+f.ts;
+  document.getElementById('board').innerHTML=f.board.map(b=>
+    '<div class="row'+(pn.has(b.name)?'':' new')+'" title="'+
+    (b.why||'').replace(/"/g,'')+'"><span class="nm">'+b.name+
+    '</span><div class="bar" style="width:'+(b.score*120)+'px"></div>'+
+    '<span class="sc">'+b.score.toFixed(2)+'</span></div>').join('');
+}
+</script></body></html>"""
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return PAGE
+
+
+@app.get("/replay", response_class=HTMLResponse)
+def replay_page():
+    return REPLAY

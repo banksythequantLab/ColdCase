@@ -24,6 +24,9 @@ agent resumes seamlessly across sessions — and even across crashes.
 
 1. **Open the dashboard** ([live](https://coldcase.savagealgo.com)) — see the
    suspect board, the per-suspect memory trail, and the communication graph.
+   The **[memory replay](https://coldcase.savagealgo.com/replay)** page lets you
+   scrub through the investigation's history and watch suspects appear and rise
+   as the agent accumulates evidence across sessions.
 2. **Watch it investigate:** `python src/agent/investigator.py` streams the
    agent's tool calls as it searches emails, reads them, and records evidence.
 3. **Kill it mid-investigation** (Ctrl-C), then **restart it** — it prints
