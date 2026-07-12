@@ -1,0 +1,43 @@
+# Local dev stack for Cold Case: Ollama (agent LLM) + a local CockroachDB.
+# Production uses CockroachDB Cloud (AWS us-east-1); this compose is for
+# reproducible local testing of the agent loop and schema.
+#
+#   docker compose up -d
+#   docker exec -it coldcase-ollama ollama pull qwen3:30b-a3b-instruct-2507-q4_K_M
+#   cockroach sql --insecure --host localhost:26257 < sql/schema.sql
+#   # set CRDB_ADMIN_URL / OLLAMA_URL in .env to the local endpoints below
+#
+# Note: the 30B model needs a capable GPU. For CPU-only smoke tests, swap
+# AGENT_MODEL to qwen3:8b in .env.
+version: "3.8"
+
+services:
+  cockroachdb:
+    image: cockroachdb/cockroach:v25.4.10
+    container_name: coldcase-crdb
+    command: start-single-node --insecure
+    ports:
+      - "26257:26257"   # SQL
+      - "8080:8080"     # DB console
+    volumes:
+      - crdb-data:/cockroach/cockroach-data
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: coldcase-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # GPU passthrough (NVIDIA). Remove the 'deploy' block for CPU-only.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  crdb-data:
+  ollama-models:

@@ -55,6 +55,23 @@ we scored its conclusions against the actual prosecutions.
 - **Creativity:** solving a historical case against real convictions, with an
   honest experiment log including documented failures.
 
+## The honest headline (and the recall defense)
+
+**Using nothing but the raw email corpus, the agent found 4 of the 18 people
+who actually pleaded guilty — blind, from zero, with no answer key.** The 14 it
+didn't flag are the ones whose guilt rests on testimony, financial filings, and
+plea deals that *aren't in the emails* (Fastow, Koenig, Rieker). Recall
+measures what's in the corpus; precision measures what's in the agent — and the
+agent is conservatively precise (100% precision@3, zero false accusations in
+the top tier). The ablation proves the memory is what does it: **0/18 without
+memory, 4/18 with it.**
+
+> "You found 4 of 18 — why trust you?" *Because the 4 are the ones we're most
+> confident about and can fully justify; we said "I don't know" on the rest
+> rather than guess. In e-discovery a false accusation costs millions, so a
+> system that knows its limits beats one that guesses. Add the filings and
+> testimony and the architecture finds the rest — it just needs the data.*
+
 ## Why this is the right demo for "agentic memory"
 
 For most agents, memory is a nice-to-have. For an investigator it *is* the

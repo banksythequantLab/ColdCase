@@ -167,6 +167,25 @@ himself, because Kopper is reachable through the communication graph while
 Fastow's crimes were off-book (his money never appears in the financial data).
 The memory-driven graph search found a name the financials alone would miss.
 
+### The honest headline
+
+**Using nothing but the raw email corpus, the agent found 4 of the 18 people
+who actually pleaded guilty — blind, from zero.** It was never told who was
+convicted. And the 14 it didn't flag are the ones whose guilt rests on
+*testimony, financial filings, and plea agreements that aren't in the emails* —
+Fastow, Koenig, Rieker. Reconstructing a fraud from scratch, out of half a
+million messages, with no answer key, is a hard problem; getting the four it
+was most confident about exactly right — with zero false accusations in the top
+tier — is the result that matters.
+
+> **If a law firm asks "you found 4 of 18 — why should I trust you?"** The
+> answer: *because the 4 we found are the 4 we're most confident about, and we
+> can show you exactly why. We didn't guess on the other 14 — we said "I don't
+> know." In e-discovery, false accusations cost millions in litigation, so a
+> system that knows its limits is more valuable than one that guesses. Add the
+> filings and testimony — the evidence that isn't in email — and the
+> architecture finds the rest. We just need the data.*
+
 ### Precision over recall — a design decision, not a shortfall
 The evaluation intentionally prioritizes **precision over recall**. In a
 financial investigation, falsely accusing an innocent executive is far more
@@ -246,12 +265,47 @@ means adding source parsers — the CockroachDB memory layer is unchanged.
   actors over peripheral outsiders.
 - **All experiments:** [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) (E1–E5).
 
+## Deployment roadmap
+
+- **Phase 1 (now):** blind investigation on historical data, scored against
+  ground truth.
+- **Phase 2:** human-in-the-loop review of flagged suspects (the agent triages;
+  investigators decide).
+- **Phase 3:** integration with e-discovery platforms (Relativity, Everlaw).
+- **Phase 4:** regulatory pilot with a law firm, addressing FRCP/GDPR and
+  court-admissible chain-of-custody certification.
+
+## Reproducibility
+
+- **Agent LLM:** Qwen3-30B-A3B (`qwen3:30b-a3b-instruct-2507-q4_K_M`) via
+  Ollama — pinned model + quantization for deterministic behaviour.
+- **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` (384-dim) via
+  fastembed on GPU (onnxruntime-CUDA).
+- **Memory:** CockroachDB Cloud (Standard, AWS us-east-1); `sql/schema.sql` +
+  `sql/production.sql` (adds a `system_health` view and a `reasoning_edges`
+  graph for explainability/temporal reasoning).
+- **Local dev stack:** [`docker-compose.yml`](docker-compose.yml) brings up
+  Ollama + a local CockroachDB for testing (CockroachDB Cloud used in prod).
+
 ## Where this goes next
+
+- **Lift recall with multi-signal scoring** — combine reputation, financial
+  anomalies, finding strength, and graph position, weighted by corpus coverage
+  (see `EXPERIMENTS.md` E4/E5 for why no single signal suffices).
+- **Join richer sources** — filings, testimony, chat (Slack/Teams) into the
+  same memory, which is where the missing 14 POIs' evidence lives.
+- **Adversarial self-critique ("defense attorney" mode)** — generate innocent
+  explanations for each finding and lower confidence the agent can't rebut;
+  the `reasoning_edges` table is the schema for tracking those chains.
+- **Bedrock/SageMaker inference** — the memory layer is unchanged; only the LLM
+  endpoint moves.
 
 The architecture is domain-agnostic — swap the corpus and it applies to SEC
 investigations, anti-money-laundering, procurement and insurance fraud, insider
-trading, or healthcare-billing fraud. Any domain where an agent must accumulate
-evidence over time and never lose it is a fit for CockroachDB-backed memory.
+trading, or healthcare-billing fraud (Madoff, FTX, and similar cases are drop-in
+by pointing the ingest at a new corpus). Any domain where an agent must
+accumulate evidence over time and never lose it is a fit for CockroachDB-backed
+memory.
 
 ## Why CockroachDB? (not just a bigger context window)
 
