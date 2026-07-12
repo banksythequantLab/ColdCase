@@ -36,9 +36,11 @@ SLIDES = [
     # 0 - title
     wrap("""<div class=kick>CockroachDB &times; AWS &middot; Agentic Memory</div>
     <h1>Cold&nbsp;Case</h1>
-    <p>We gave an AI agent <span class=gold>517,401 real Enron emails</span>,
-    hid the list of who was convicted, and asked it to solve the case
-    &mdash; from scratch.</p>"""),
+    <p style="font-size:52px;font-style:italic;color:#f0b429;font-weight:600;
+    margin-top:24px">&ldquo;Metadata is not documentation. It is evidence.&rdquo;</p>
+    <p style="margin-top:28px">We gave an AI agent
+    <span class=gold>517,401 real Enron emails</span>, hid the list of who was
+    convicted, and asked it to solve the case &mdash; from scratch.</p>"""),
     # 1 - architecture / memory
     wrap("""<div class=kick>The memory is the product</div>
     <h2>CockroachDB is the agent's <span class=blu>brain state</span></h2>
