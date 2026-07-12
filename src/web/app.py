@@ -24,6 +24,15 @@ def db():
     return psycopg.connect(os.environ["CRDB_ADMIN_URL"])
 
 
+def main_case(c):
+    """The primary accumulated case (excludes ablation/experiment cases)."""
+    r = c.execute(
+        "SELECT case_id FROM investigations"
+        " WHERE title NOT LIKE 'ablation%%'"
+        " ORDER BY created_at LIMIT 1").fetchone()
+    return r[0] if r else None
+
+
 def build_replay():
     """Load timestamped S3 case snapshots into replay frames (cached)."""
     import json
@@ -106,17 +115,19 @@ def stats():
 def timeline(person: str = ""):
     """Cross-session audit trail for one suspect: the proof of memory."""
     with db() as c:
+        mc = main_case(c)
         if not person:
             person = (c.execute(
                 "SELECT s.person_id::STRING FROM suspects s"
-                " ORDER BY s.suspicion_score DESC LIMIT 1").fetchone()
-                or [""])[0]
+                " WHERE s.case_id=%s ORDER BY s.suspicion_score DESC LIMIT 1",
+                (mc,)).fetchone() or [""])[0]
         name = (c.execute("SELECT coalesce(real_name, full_name) FROM persons"
                           " WHERE person_id=%s", (person,)).fetchone()
                 or ["?"])[0]
         events = c.execute(
             "SELECT ts, suspicion_score, rationale FROM suspect_events"
-            " WHERE person_id=%s ORDER BY ts", (person,)).fetchall()
+            " WHERE person_id=%s AND rationale NOT LIKE 'Review/stance%%'"
+            " ORDER BY ts", (person,)).fetchall()
     return JSONResponse({"person_id": person, "name": name,
                          "events": [{"ts": str(e[0])[:19],
                                      "kind": "score " + f"{float(e[1]):.2f}",
@@ -129,40 +140,53 @@ def graph(limit: int = 120):
     """Top communication edges among the most-connected people; suspects
     flagged. One-shot, cached client-side."""
     with db() as c:
+        mc = main_case(c)
         nodes = c.execute("""
           SELECT p.person_id::STRING, coalesce(p.real_name, split_part(
                  p.full_name,'@',1)), pp.pagerank,
                  coalesce(s.suspicion_score, -1)
           FROM person_profiles pp JOIN persons p USING (person_id)
           LEFT JOIN suspects s ON s.person_id = p.person_id
-          ORDER BY pp.pagerank DESC LIMIT %s""", (limit,)).fetchall()
+             AND s.case_id = %s
+          ORDER BY pp.pagerank DESC LIMIT %s""", (mc, limit)).fetchall()
         ids = tuple(n[0] for n in nodes)
         edges = c.execute("""
           SELECT src::STRING, dst::STRING, msg_count FROM comm_edges
           WHERE src = ANY(%s) AND dst = ANY(%s) AND msg_count > 2
+          AND src != dst
           ORDER BY msg_count DESC LIMIT 500""",
           (list(ids), list(ids))).fetchall()
     return JSONResponse({
         "nodes": [{"id": n[0], "name": n[1], "rank": float(n[2]),
                    "score": float(n[3])} for n in nodes],
-        "edges": [{"s": e[0], "t": e[1], "w": e[2]} for e in edges]})
+        "edges": [{"source": e[0], "target": e[1], "w": e[2]}
+                  for e in edges]})
 
 
 @app.get("/api/suspects")
 def suspects():
     """Live suspect board + case memory counts (cheap queries)."""
     with db() as c:
+        mc = main_case(c)
         rows = c.execute("""
           SELECT coalesce(p.real_name, p.full_name), s.suspicion_score,
                  s.rationale, s.updated_at::STRING
           FROM suspects s JOIN persons p USING (person_id)
-          ORDER BY s.suspicion_score DESC LIMIT 25""").fetchall()
+          WHERE s.case_id = %s
+          ORDER BY s.suspicion_score DESC LIMIT 25""", (mc,)).fetchall()
         hyp = c.execute(
-            "SELECT status, count(*) FROM hypotheses GROUP BY 1").fetchall()
-        n_find = c.execute("SELECT count(*) FROM findings").fetchone()[0]
-        n_ev = c.execute("SELECT count(*) FROM evidence").fetchone()[0]
+            "SELECT status, count(*) FROM hypotheses WHERE case_id=%s"
+            " GROUP BY 1", (mc,)).fetchall()
+        n_find = c.execute(
+            "SELECT count(*) FROM findings f JOIN hypotheses h"
+            " USING (hypothesis_id) WHERE h.case_id=%s", (mc,)).fetchone()[0]
+        n_ev = c.execute(
+            "SELECT count(*) FROM evidence e JOIN findings f"
+            " USING (finding_id) JOIN hypotheses h USING (hypothesis_id)"
+            " WHERE h.case_id=%s", (mc,)).fetchone()[0]
         n_sess = c.execute(
-            "SELECT count(*) FROM agent_sessions").fetchone()[0]
+            "SELECT count(*) FROM agent_sessions WHERE case_id=%s",
+            (mc,)).fetchone()[0]
     return JSONResponse({
         "suspects": [{"name": r[0], "score": float(r[1]),
                       "rationale": r[2], "updated": r[3]} for r in rows],
@@ -206,8 +230,12 @@ ingestion &middot; live</p>
 CockroachDB &mdash; proof the agent never forgets.</p>
 <div id="trail"></div>
 <h2 style="color:#f0b429;margin-top:2rem">&#128225; Communication network</h2>
-<p class="sub">Top-connected people; <span style="color:#f0b429">gold</span> =
-flagged suspects.</p>
+<p class="sub">Each dot is an Enron employee among the 60 most central in the
+email network; lines connect people who emailed each other (thicker = more
+messages). Larger dots have higher PageRank (more influence in the network).
+<span style="color:#f0b429">Gold</span> dots are people the agent has flagged as
+suspects &mdash; hover any dot for the name and score. This is the same
+363,355-edge graph the agent queries to find hidden intermediaries.</p>
 <svg id="graph" width="100%" height="460"
  style="background:#0b0f16;border:1px solid #30363d;border-radius:10px"></svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -300,11 +328,29 @@ transition:all .4s}
 .nm{width:150px;font-weight:600}.sc{width:44px;color:#f0b429;font-weight:700}
 </style></head><body>
 <h1>&#129504; Memory Replay</h1>
-<p class="sub">Scrub through the investigation's history, reconstructed from
-CockroachDB case snapshots stored in S3. Watch suspects appear and rise as the
-agent accumulates evidence across sessions. <a href="/">&larr; ops dashboard</a></p>
+<p class="sub"><a href="/">&larr; back to ops dashboard</a></p>
+<div style="background:#161b22;border:1px solid #30363d;border-radius:10px;
+padding:1rem 1.2rem;margin:1rem 0;line-height:1.5">
+<b style="color:#f0b429">What am I looking at?</b><br>
+Each time the investigator agent finishes a work session, it saves a complete
+copy of its memory &mdash; every hypothesis, finding, piece of evidence, and
+suspect score &mdash; from CockroachDB to Amazon S3. Each of those saved copies
+is one <b>frame</b> below. <b>Drag the slider</b> to move backward and forward
+through the investigation's history and watch the agent's thinking evolve:
+<ul style="margin:.5rem 0 0 1rem;color:#8b949e">
+<li>The <b>counters</b> show how much the agent had discovered by that point in
+time (hypotheses it was pursuing, findings it recorded, evidence it collected).</li>
+<li>Each <b>bar</b> is one suspect; its length and number are that person's
+guilt score <i>at that moment</i>. Watch scores rise as evidence accumulates.</li>
+<li>A <b style="color:#3fb950">green-outlined</b> row is a suspect who first
+appears in this frame &mdash; a new lead the agent just uncovered.</li>
+<li>Hover a row to read the agent's reasoning recorded at that time.</li>
+</ul>
+This is only possible because the agent's memory <i>persists</i> in
+CockroachDB. A stateless chatbot would have nothing to replay.</div>
 <div class="counts">
- <div><b id="fi">-</b>frame</div><div><b id="hy">-</b>hypotheses</div>
+ <div><b id="fi">-</b>frame (session snapshot)</div>
+ <div><b id="hy">-</b>hypotheses</div>
  <div><b id="fn">-</b>findings</div><div><b id="ev">-</b>evidence</div>
 </div>
 <input type="range" id="scrub" min="0" value="0" step="1">
