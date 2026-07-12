@@ -1,30 +1,52 @@
 <!doctype html><html><head><meta charset="utf-8">
 <title>Cold Case — AWS-hosted</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-body{background:#0d1117;color:#e6edf3;font-family:system-ui;margin:0;
-padding:2rem;max-width:720px;margin:auto}
-h1{color:#f0b429}.sub{color:#8b949e}
-.card{background:#161b22;border:1px solid #30363d;border-radius:10px;
-padding:1rem;margin:.7rem 0}
-.big{font-size:1.4rem;font-weight:700;color:#f0b429;float:right}
-small{color:#8b949e}.tag{color:#8b949e;font-size:.8rem}
+:root{--bg:#0d1117;--panel:#161b22;--line:#2a3038;--gold:#f0b429;
+--ink:#e9edf2;--mut:#8b949e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);
+font-family:'Inter',system-ui,sans-serif;margin:0 auto;
+padding:2.6rem 1.5rem 4rem;max-width:768px;line-height:1.6;
+letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .15rem;
+display:flex;align-items:center;gap:.55rem}
+h2{font-size:1.15rem;font-weight:700;letter-spacing:-.02em;color:var(--gold);
+margin:1.6rem 0 .4rem}
+.sub{color:var(--mut);font-size:.92rem;margin:.15rem 0}
+.tag{color:var(--mut);font-size:.76rem;text-transform:uppercase;
+letter-spacing:.05em;font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+padding:.9rem 1.1rem;margin:.6rem 0;display:flex;gap:1rem;align-items:flex-start}
+.sc{font-size:1.5rem;font-weight:800;letter-spacing:-.03em;min-width:2.6rem;
+font-variant-numeric:tabular-nums}
+.nm{font-weight:700;font-size:1rem}
+.wy{color:var(--mut);font-size:.86rem;margin-top:.15rem;line-height:1.5}
+.ic{width:1.4rem;height:1.4rem;stroke:var(--gold);fill:none;stroke-width:1.8;
+stroke-linecap:round;stroke-linejoin:round}
 </style></head><body>
-<h1>&#128373; Cold Case</h1>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-5-5"/></symbol>
+</defs></svg>
+<h1><svg class="ic"><use href="#i-search"/></svg>Cold&nbsp;Case</h1>
 <p class="sub">Autonomous financial-crimes investigator &middot; CockroachDB
 agentic memory &middot; <span class="tag">served from Amazon S3</span></p>
 <p class="sub" id="counts">loading&hellip;</p>
-<h2 style="color:#f0b429">Suspect board</h2>
+<h2>Suspect board</h2>
 <div id="board"></div>
 <p class="tag" id="updated"></p>
 <script>
 fetch('public/case.json?_=' + Date.now()).then(r=>r.json()).then(d=>{
   document.getElementById('counts').textContent =
     Object.entries(d.counts).map(([k,v])=>v+' '+k).join(' · ');
-  document.getElementById('board').innerHTML = d.suspects.map(s=>
-    '<div class="card"><span class="big">'+Number(s.score).toFixed(2)+
-    '</span><b>'+s.name+'</b><br><small>'+(s.rationale||'')+'</small></div>'
-  ).join('');
+  document.getElementById('board').innerHTML = d.suspects.map(s=>{
+    const c = s.score>=0.9?'#f0b429':s.score>=0.5?'#e0873a':'#8b949e';
+    return '<div class="card"><div class="sc" style="color:'+c+'">'+
+    Number(s.score).toFixed(2)+'</div><div><div class="nm">'+s.name+
+    '</div><div class="wy">'+(s.rationale||'')+'</div></div></div>';
+  }).join('');
   document.getElementById('updated').textContent = 'snapshot '+d.updated;
 });
 </script></body></html>

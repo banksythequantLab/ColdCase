@@ -225,22 +225,50 @@ def suspects():
 
 PAGE = """<!doctype html><html><head><title>Cold Case Ops</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-body{background:#0d1117;color:#e6edf3;font-family:system-ui;margin:0;
-padding:2rem;max-width:720px;margin:auto}
-h1{color:#f0b429}.sub{color:#8b949e}
-.card{background:#161b22;border:1px solid #30363d;border-radius:10px;
-padding:1.2rem;margin:1rem 0}
-.big{font-size:2.4rem;font-weight:700}
-.bar{background:#21262d;border-radius:6px;height:14px;overflow:hidden}
-.fill{background:#f0b429;height:100%;width:0%;transition:width .5s}
-.row{display:flex;gap:1rem;flex-wrap:wrap}.row .card{flex:1;min-width:150px}
-button{background:#238636;color:#fff;border:0;border-radius:6px;
-padding:.6rem 1.2rem;font-size:1rem;cursor:pointer}
-small{color:#8b949e}
+:root{--bg:#0d1117;--panel:#161b22;--line:#2a3038;--gold:#f0b429;
+--ink:#e9edf2;--mut:#8b949e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);
+font-family:'Inter',system-ui,sans-serif;margin:0 auto;
+padding:2.6rem 1.5rem 4rem;max-width:768px;line-height:1.6;
+letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .15rem;
+display:flex;align-items:center;gap:.55rem}
+h2{font-size:1.15rem;font-weight:700;letter-spacing:-.02em;color:var(--gold);
+margin:2.4rem 0 .35rem;display:flex;align-items:center;gap:.5rem}
+h3{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+color:var(--mut);margin:1.3rem 0 .5rem}
+.sub{color:var(--mut);font-size:.92rem;margin:.15rem 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+padding:1.1rem 1.3rem;margin:.85rem 0}
+.big{font-size:2.1rem;font-weight:800;letter-spacing:-.03em;
+font-variant-numeric:tabular-nums;line-height:1.1}
+.bar{background:#21262d;border-radius:6px;height:12px;overflow:hidden;margin:.55rem 0}
+.fill{background:linear-gradient(90deg,#e0873a,#f0b429);height:100%;width:0%;
+transition:width .6s}
+.row{display:flex;gap:.9rem;flex-wrap:wrap}
+.row .card{flex:1;min-width:148px;text-align:center}
+button{background:#21262d;color:var(--ink);border:1px solid var(--line);
+border-radius:8px;padding:.55rem 1.1rem;font-size:.88rem;font-weight:600;
+font-family:inherit;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--gold);color:var(--gold)}
+small{color:var(--mut);font-size:.78rem;letter-spacing:.02em;
+text-transform:uppercase;font-weight:600}
+.ic{width:1.4rem;height:1.4rem;stroke:var(--gold);fill:none;stroke-width:1.8;
+stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic-h2{width:1.15rem;height:1.15rem}
 </style></head><body>
-<h1>&#128374; Cold Case</h1>
-<p class="sub">Enron corpus &rarr; CockroachDB &middot; agentic memory
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-5-5"/></symbol>
+<symbol id="i-mem" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/><rect x="10" y="10" width="4" height="4" rx="1"/></symbol>
+<symbol id="i-net" viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/><path d="M6.8 7.2l4 9M17.2 7.2l-4 9M7 6h10"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="3.2"/></symbol>
+</defs></svg>
+<h1><svg class="ic"><use href="#i-search"/></svg>Cold&nbsp;Case</h1>
+<p class="sub">Enron corpus &rarr; CockroachDB &middot; agentic-memory
 ingestion &middot; live</p>
 <div class="card"><div class="big" id="pct">&mdash;</div>
 <div class="bar"><div class="fill" id="fill"></div></div>
@@ -251,14 +279,14 @@ ingestion &middot; live</p>
 <div class="card"><small>graph edges</small><div class="big" id="edges">?</div></div>
 </div>
 <button onclick="stats()">Refresh DB stats (costs RUs)</button>
-<h2 style="color:#f0b429;margin-top:2rem">&#128373; Suspect board</h2>
+<h2><svg class="ic ic-h2"><use href="#i-scan"/></svg>Suspect board</h2>
 <p class="sub" id="memstats"></p>
 <div id="board"></div>
-<h2 style="color:#f0b429;margin-top:2rem">&#129504; Memory trail</h2>
+<h2><svg class="ic ic-h2"><use href="#i-mem"/></svg>Memory trail</h2>
 <p class="sub">The top suspect's case file, reconstructed across sessions from
 CockroachDB &mdash; proof the agent never forgets.</p>
 <div id="trail"></div>
-<h2 style="color:#f0b429;margin-top:2rem">&#128225; Communication network</h2>
+<h2><svg class="ic ic-h2"><use href="#i-net"/></svg>Communication network</h2>
 <p class="sub">Each dot is an Enron employee among the 60 most central in the
 email network; lines connect people who emailed each other (thicker = more
 messages). Larger dots have higher PageRank (more influence in the network).
@@ -297,11 +325,15 @@ async function board(){
     b.sessions + ' sessions · ' +
     Object.entries(b.hypotheses).map(([k,v])=>v+' '+k).join(' · ') +
     ' · ' + b.findings + ' findings · ' + b.evidence + ' evidence rows';
-  document.getElementById('board').innerHTML = b.suspects.map(s =>
-    '<div class="card"><b>' + s.name + '</b>' +
-    '<span style="float:right;color:#f0b429;font-size:1.3rem">' +
-    s.score.toFixed(2) + '</span><br><small>' +
-    (s.rationale||'') + '</small></div>').join('');
+  document.getElementById('board').innerHTML = b.suspects.map(s =>{
+    const col = s.score>=0.9?'#f0b429':s.score>=0.5?'#e0873a':'#8b949e';
+    return '<div class="card" style="display:flex;gap:1rem;align-items:flex-start">'+
+    '<div style="font-size:1.5rem;font-weight:800;color:'+col+
+    ';font-variant-numeric:tabular-nums;min-width:2.6rem;letter-spacing:-.03em">'+
+    s.score.toFixed(2)+'</div><div><div style="font-weight:700;font-size:1rem;'+
+    'letter-spacing:.01em">'+s.name+'</div><div style="color:#8b949e;'+
+    'font-size:.86rem;margin-top:.15rem;line-height:1.5">'+
+    (s.rationale||'')+'</div></div></div>';}).join('');
 }
 async function trail(){
   const t = await (await fetch('api/timeline')).json();
@@ -385,23 +417,45 @@ setTimeout(drawGraph, 800);
 REPLAY = """<!doctype html><html><head><meta charset="utf-8">
 <title>Cold Case — Memory Replay</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-body{background:#0d1117;color:#e6edf3;font-family:system-ui;margin:0;
-padding:2rem;max-width:760px;margin:auto}
-h1{color:#f0b429}.sub{color:#8b949e}a{color:#58a6ff}
-.counts{display:flex;gap:1rem;margin:1rem 0}
-.counts div{background:#161b22;border:1px solid #30363d;border-radius:8px;
-padding:.6rem 1rem;flex:1;text-align:center}
-.counts b{font-size:1.5rem;color:#f0b429;display:block}
-input[type=range]{width:100%;accent-color:#f0b429}
-.row{display:flex;align-items:center;gap:.6rem;margin:.35rem 0;
-background:#161b22;border:1px solid #30363d;border-radius:8px;padding:.5rem .8rem;
-transition:all .4s}
+:root{--bg:#0d1117;--panel:#161b22;--line:#2a3038;--gold:#f0b429;
+--ink:#e9edf2;--mut:#8b949e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);
+font-family:'Inter',system-ui,sans-serif;margin:0 auto;
+padding:2.6rem 1.5rem 4rem;max-width:768px;line-height:1.6;
+letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .15rem;
+display:flex;align-items:center;gap:.55rem}
+h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;color:var(--gold);
+margin:1.4rem 0 .3rem}
+.sub{color:var(--mut);font-size:.92rem;margin:.15rem 0}a{color:#58a6ff;
+text-decoration:none}a:hover{text-decoration:underline}
+.ic{width:1.4rem;height:1.4rem;stroke:var(--gold);fill:none;stroke-width:1.8;
+stroke-linecap:round;stroke-linejoin:round;flex:none}
+.counts{display:flex;gap:.75rem;margin:1.1rem 0}
+.counts div{background:var(--panel);border:1px solid var(--line);
+border-radius:10px;padding:.7rem 1rem;flex:1;text-align:center}
+.counts b{font-size:1.6rem;font-weight:800;color:var(--gold);display:block;
+letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.counts div small,.counts div{font-size:.76rem;color:var(--mut);
+text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--gold);height:6px}
+.row{display:flex;align-items:center;gap:.7rem;margin:.35rem 0;
+background:var(--panel);border:1px solid var(--line);border-radius:9px;
+padding:.55rem .9rem;transition:all .4s}
 .row.new{border-color:#3fb950;box-shadow:0 0 0 1px #3fb950}
-.bar{height:10px;border-radius:5px;background:#f0b429;transition:width .5s}
-.nm{width:150px;font-weight:600}.sc{width:44px;color:#f0b429;font-weight:700}
+.bar{height:9px;border-radius:5px;
+background:linear-gradient(90deg,#e0873a,#f0b429);transition:width .5s}
+.nm{width:158px;font-weight:600;font-size:.9rem}
+.sc{width:44px;color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
 </style></head><body>
-<h1>&#129504; Memory Replay</h1>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-mem" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/><rect x="10" y="10" width="4" height="4" rx="1"/></symbol>
+</defs></svg>
+<h1><svg class="ic"><use href="#i-mem"/></svg>Memory Replay</h1>
 <p class="sub"><a href="/">&larr; back to ops dashboard</a></p>
 <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;
 padding:1rem 1.2rem;margin:1rem 0;line-height:1.5">
