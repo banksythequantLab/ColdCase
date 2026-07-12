@@ -117,10 +117,17 @@ def timeline(person: str = ""):
     with db() as c:
         mc = main_case(c)
         if not person:
+            # prefer the highest-scored suspect that has clean score history
             person = (c.execute(
                 "SELECT s.person_id::STRING FROM suspects s"
-                " WHERE s.case_id=%s ORDER BY s.suspicion_score DESC LIMIT 1",
-                (mc,)).fetchone() or [""])[0]
+                " WHERE s.case_id=%s AND EXISTS (SELECT 1 FROM suspect_events e"
+                "   WHERE e.person_id=s.person_id"
+                "   AND e.rationale NOT LIKE 'Review/stance%%')"
+                " ORDER BY s.suspicion_score DESC LIMIT 1", (mc,)).fetchone()
+                or c.execute(
+                "SELECT s.person_id::STRING FROM suspects s WHERE s.case_id=%s"
+                " ORDER BY s.suspicion_score DESC LIMIT 1", (mc,)).fetchone()
+                or [""])[0]
         name = (c.execute("SELECT coalesce(real_name, full_name) FROM persons"
                           " WHERE person_id=%s", (person,)).fetchone()
                 or ["?"])[0]
@@ -236,8 +243,13 @@ messages). Larger dots have higher PageRank (more influence in the network).
 <span style="color:#f0b429">Gold</span> dots are people the agent has flagged as
 suspects &mdash; hover any dot for the name and score. This is the same
 363,355-edge graph the agent queries to find hidden intermediaries.</p>
-<svg id="graph" width="100%" height="460"
- style="background:#0b0f16;border:1px solid #30363d;border-radius:10px"></svg>
+<p class="sub" style="margin:.3rem 0">
+<span style="color:#f0b429">●</span> flagged suspect (glowing, labelled) ·
+<span style="color:#e0873a">●</span> lower-scored suspect ·
+<span style="color:#4877b0">●</span> other employee (size = influence) ·
+<b>hover</b> a dot to trace only their contacts · <b>drag</b> to pull nodes.</p>
+<svg id="graph" width="100%" height="540"
+ style="background:radial-gradient(ellipse at center,#101826 0%,#0b0f16 70%);border:1px solid #30363d;border-radius:10px"></svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 </body></html>"""
 
@@ -280,25 +292,65 @@ async function trail(){
 }
 async function drawGraph(){
   const g = await (await fetch('api/graph')).json();
-  const svg = d3.select('#graph'), W = svg.node().clientWidth, H = 460;
+  const svg = d3.select('#graph'); const W = svg.node().clientWidth, H = 540;
   svg.selectAll('*').remove();
+  const defs = svg.append('defs');
+  const fl = defs.append('filter').attr('id','glow').attr('x','-60%')
+    .attr('y','-60%').attr('width','220%').attr('height','220%');
+  fl.append('feGaussianBlur').attr('stdDeviation','4').attr('result','b');
+  const fm = fl.append('feMerge');
+  fm.append('feMergeNode').attr('in','b');
+  fm.append('feMergeNode').attr('in','SourceGraphic');
+  const maxR = d3.max(g.nodes,d=>d.rank)||1;
+  const isS = d=>d.score>=0;
+  const rOf = d=> isS(d) ? 9+d.score*8 : 3+11*Math.sqrt(d.rank/maxR);
+  const adj={}; g.nodes.forEach(n=>adj[n.id]=new Set());
+  g.edges.forEach(e=>{const s=e.source.id||e.source,t=e.target.id||e.target;
+    if(adj[s])adj[s].add(t); if(adj[t])adj[t].add(s);});
+  const root = svg.append('g');
   const sim = d3.forceSimulation(g.nodes)
-    .force('link', d3.forceLink(g.edges).id(d=>d.id).distance(40).strength(.3))
-    .force('charge', d3.forceManyBody().strength(-30))
-    .force('center', d3.forceCenter(W/2, H/2));
-  const link = svg.append('g').attr('stroke','#30363d').attr('stroke-opacity',.5)
-    .selectAll('line').data(g.edges).join('line')
-    .attr('stroke-width', d=>Math.min(3, Math.log(d.w)));
-  const node = svg.append('g').selectAll('circle').data(g.nodes).join('circle')
-    .attr('r', d=> d.score>=0 ? 7 : 3+d.rank*400)
-    .attr('fill', d=> d.score>=0.5 ? '#f0b429' : d.score>=0 ? '#d97706' : '#3b5573')
-    .attr('stroke','#0b0f16');
-  node.append('title').text(d=> d.name + (d.score>=0?' (suspect '+d.score.toFixed(2)+')':''));
-  sim.on('tick', ()=>{
+    .force('link', d3.forceLink(g.edges).id(d=>d.id)
+      .distance(d=>62-Math.min(34,Math.log(d.w)*4)).strength(.11))
+    .force('charge', d3.forceManyBody().strength(-85))
+    .force('collide', d3.forceCollide().radius(d=>rOf(d)+4))
+    .force('x', d3.forceX(W/2).strength(.05))
+    .force('y', d3.forceY(H/2).strength(.07));
+  const link = root.append('g').selectAll('line').data(g.edges).join('line')
+    .attr('stroke','#2b3a55')
+    .attr('stroke-opacity',d=>Math.min(.65,.12+Math.log(d.w)/12))
+    .attr('stroke-width',d=>Math.min(3.5,.4+Math.log(d.w)/2));
+  const node = root.append('g').selectAll('circle').data(g.nodes).join('circle')
+    .attr('r',rOf)
+    .attr('fill',d=>d.score>=0.5?'#f0b429':d.score>=0?'#e0873a':'#4877b0')
+    .attr('stroke',d=>isS(d)?'#fff6d5':'#0b0f16')
+    .attr('stroke-width',d=>isS(d)?1.6:.6)
+    .attr('filter',d=>d.score>=0.5?'url(#glow)':null)
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+  node.append('title').text(d=>d.name+(isS(d)?' — suspect '+d.score.toFixed(2):' — PageRank '+d.rank.toFixed(4)));
+  const topR=[...g.nodes].filter(d=>!isS(d)).sort((a,b)=>b.rank-a.rank).slice(0,6);
+  const labeled=g.nodes.filter(d=>isS(d)||topR.includes(d));
+  const label = root.append('g').selectAll('text').data(labeled).join('text')
+    .text(d=>d.name).attr('text-anchor','middle').attr('pointer-events','none')
+    .attr('font-size',d=>isS(d)?12:10).attr('font-weight',d=>isS(d)?700:400)
+    .attr('fill',d=>isS(d)?'#ffd75e':'#8b949e')
+    .attr('paint-order','stroke').attr('stroke','#0b0f16').attr('stroke-width',3.5);
+  node.on('mouseover',(e,d)=>{const k=adj[d.id];
+    node.attr('opacity',n=>n.id===d.id||k.has(n.id)?1:.1);
+    label.attr('opacity',n=>n.id===d.id||k.has(n.id)?1:.1);
+    link.attr('stroke',l=>(l.source.id===d.id||l.target.id===d.id)?'#f0b429':'#2b3a55')
+        .attr('stroke-opacity',l=>(l.source.id===d.id||l.target.id===d.id)?.9:.02);})
+   .on('mouseout',()=>{node.attr('opacity',1);label.attr('opacity',1);
+    link.attr('stroke','#2b3a55').attr('stroke-opacity',l=>Math.min(.65,.12+Math.log(l.w)/12));});
+  sim.on('tick',()=>{
+    g.nodes.forEach(d=>{const r=rOf(d);d.x=Math.max(r,Math.min(W-r,d.x));d.y=Math.max(r,Math.min(H-r,d.y));});
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
         .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
-    node.attr('cx',d=>Math.max(6,Math.min(W-6,d.x)))
-        .attr('cy',d=>Math.max(6,Math.min(H-6,d.y)));
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    label.attr('x',d=>d.x).attr('y',d=>d.y-rOf(d)-5);
   });
 }
 tick(); setInterval(tick, 5000);
