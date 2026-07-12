@@ -89,6 +89,21 @@ def hybrid_search(query, k=8, graph_weight=0.4):
     return out[:int(k)]
 
 
+def search_filings(query, k=6):
+    """Semantic search over Enron's SEC filings (10-K, proxy, 8-Ks) - the
+    official documents that disclose related-party deals (LJM), executive
+    compensation, and restatements. Use to CORROBORATE email findings with
+    public financial disclosures, especially for people who avoided email."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT left(dc.text, 500), d.form, d.filed::STRING"
+            " FROM doc_chunks dc JOIN documents d USING (doc_id)"
+            " ORDER BY dc.embedding <=> %s::VECTOR LIMIT %s",
+            (_embed(query), int(k))).fetchall()
+    return [{"excerpt": r[0], "source": f"SEC {r[1]}", "filed": r[2]}
+            for r in rows]
+
+
 def lookup_person(name_or_email):
     """Find a person by (partial) name or email address, any word order."""
     import re

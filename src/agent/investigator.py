@@ -23,10 +23,11 @@ import tools as T
 load_dotenv()
 MAX_CALLS = int(os.environ.get("MAX_TOOL_CALLS_PER_SESSION", 40))
 
-TOOL_FNS = [T.semantic_search, T.hybrid_search, T.lookup_person, T.read_email,
-            T.financial_outliers, T.graph_neighbors, T.bridge_nodes,
-            T.similar_people, T.timeline, T.reputation, T.record_hypothesis,
-            T.update_hypothesis, T.record_finding, T.update_suspect]
+TOOL_FNS = [T.semantic_search, T.hybrid_search, T.search_filings,
+            T.lookup_person, T.read_email, T.financial_outliers,
+            T.graph_neighbors, T.bridge_nodes, T.similar_people, T.timeline,
+            T.reputation, T.record_hypothesis, T.update_hypothesis,
+            T.record_finding, T.update_suspect]
 
 
 def schema_for(fn):
@@ -83,6 +84,12 @@ Three hard rules learned from prior casework:
   few sent emails) is a PRIORITY lead — investigate them through OTHER
   people's emails (semantic_search their surname + 'partnership'/'LJM'/
   'special purpose entity'), not their own mailbox.
+- SEC FILINGS: you now have search_filings over Enron's official SEC
+  documents (10-K, proxy, 8-Ks). These disclose the LJM related-party deals,
+  executive roles/pay, and restatements — the paper trail for people who
+  barely used email (e.g. the CFO). ALWAYS corroborate a financial suspect
+  against search_filings before scoring; a related-party disclosure naming a
+  person is strong concealment evidence that clears the concealment gate.
 - BREADTH OVER DEPTH: Skilling, Lay, and Hirko are already well-established
   in your memory — do NOT re-investigate them. Your goal THIS session is to
   find a NEW guilty party not yet on the board. Call financial_outliers with
