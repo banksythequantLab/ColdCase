@@ -1,0 +1,104 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Cold Case — Offline Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#2a3038;--gold:#f0b429;
+--ink:#e9edf2;--mut:#8b949e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);
+font-family:'Inter',system-ui,sans-serif;margin:0 auto;
+padding:2.4rem 1.5rem 4rem;max-width:768px;line-height:1.6;
+letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+h1{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .1rem}
+h3{font-size:1.02rem;font-weight:700;color:var(--gold);margin:1.3rem 0 .3rem}
+.sub{color:var(--mut);font-size:.9rem}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+padding:1rem 1.2rem;margin:1rem 0;line-height:1.55}
+.counts{display:flex;gap:.75rem;margin:1.1rem 0}
+.counts div{background:var(--panel);border:1px solid var(--line);
+border-radius:10px;padding:.7rem 1rem;flex:1;text-align:center;cursor:pointer;
+font-size:.74rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;
+font-weight:600;transition:.15s}
+.counts div:hover{border-color:var(--gold)}
+.counts div.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.counts b{font-size:1.6rem;font-weight:800;color:var(--gold);display:block;
+letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gold);height:6px}
+.row{display:flex;align-items:center;gap:.7rem;margin:.35rem 0;
+background:var(--panel);border:1px solid var(--line);border-radius:9px;
+padding:.55rem .9rem;transition:all .4s}
+.row.new{border-color:#3fb950;box-shadow:0 0 0 1px #3fb950}
+.bar{height:9px;border-radius:5px;
+background:linear-gradient(90deg,#e0873a,#f0b429);transition:width .5s}
+.nm{width:158px;font-weight:600;font-size:.9rem}
+.sc{width:44px;color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+padding:.6rem .8rem;margin:.4rem 0}
+.item .meta{color:var(--mut);font-size:.8rem;margin-bottom:.2rem}
+.badge{display:inline-block;padding:.05rem .5rem;border-radius:10px;
+font-size:.72rem;font-weight:700}
+.sup{background:#193a24;color:#3fb950}.ref{background:#3a1d1d;color:#f77}
+.opn{background:#2b2f36;color:#c9d1d9}
+.ev{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.82rem;
+color:#c9d1d9;white-space:pre-wrap}
+</style></head><body>
+<h1>Cold Case — offline demo</h1>
+<p class="sub">A real recorded investigation, replayed with zero setup.</p>
+<div class="note"><b style="color:var(--gold)">What this is.</b> These are
+genuine snapshots of an AI investigator's memory — captured from CockroachDB
+after each work session while it investigated the Enron fraud corpus (517,401
+emails) <i>blind</i>. No database, server, or corpus needed to view this:
+the frames are embedded in the page. <b>Drag the slider</b> to replay how the
+agent's suspects, hypotheses, and evidence accumulated across sessions. Its top
+suspects — Skilling, Lay, Hirko, Kopper — are all real Enron convictions it
+identified without ever seeing the answer key.</div>
+<div class="counts">
+ <div id="cfi"><b>-</b>frame</div>
+ <div class="tab sel" data-t="hy"><b id="chy">-</b>hypotheses</div>
+ <div class="tab" data-t="fn"><b id="cfn">-</b>findings</div>
+ <div class="tab" data-t="ev"><b id="cev">-</b>evidence</div>
+</div>
+<input type="range" id="scrub" min="0" value="0" step="1">
+<p class="sub" id="ts"></p>
+<h3>Suspect board</h3><div id="board"></div>
+<h3 id="dtitle">Hypotheses</h3><div id="detail"></div>
+<script src="data.js"></script>
+<script>
+const F=window.FRAMES; let TAB='hy';
+const s=document.getElementById('scrub'); s.max=F.length-1; s.value=F.length-1;
+s.oninput=()=>render(+s.value);
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{TAB=t.dataset.t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
+  t.classList.add('sel'); render(+s.value);});
+function esc(x){return (x||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function render(i){
+  const f=F[i], prev=i>0?F[i-1]:{board:[]};
+  const pn=new Set(prev.board.map(b=>b.name));
+  document.querySelector('#cfi b').textContent=(i+1)+'/'+F.length;
+  document.getElementById('chy').textContent=f.hypotheses.length;
+  document.getElementById('cfn').textContent=f.findings.length;
+  document.getElementById('cev').textContent=f.evidence.length;
+  document.getElementById('ts').textContent='snapshot '+f.ts;
+  document.getElementById('board').innerHTML=f.board.map(b=>
+    '<div class="row'+(pn.has(b.name)?'':' new')+'" title="'+esc(b.why)+
+    '"><span class="nm">'+b.name+'</span><div class="bar" style="width:'+
+    (b.score*120)+'px"></div><span class="sc">'+b.score.toFixed(2)+
+    '</span></div>').join('');
+  const D=document.getElementById('detail'),T=document.getElementById('dtitle');
+  if(TAB=='hy'){T.textContent='Hypotheses ('+f.hypotheses.length+')';
+    D.innerHTML=f.hypotheses.map(h=>{const c=h.status=='supported'?'sup':
+      h.status=='refuted'?'ref':'opn';return '<div class="item"><span class="badge '+
+      c+'">'+h.status+' · '+h.confidence+'</span><div style="margin-top:.3rem">'+
+      esc(h.statement)+'</div></div>';}).join('')||'<p class="sub">none yet</p>';
+  }else if(TAB=='fn'){T.textContent='Findings ('+f.findings.length+')';
+    D.innerHTML=f.findings.map(x=>'<div class="item"><div class="meta">method: '+
+      esc(x.method)+'</div>'+esc(x.summary)+'</div>').join('')||'<p class="sub">none yet</p>';
+  }else{T.textContent='Evidence ('+f.evidence.length+')';
+    D.innerHTML=f.evidence.map(x=>'<div class="item"><div class="meta">email '+
+      esc(x.email_id)+' · SHA-256 on record</div><div class="ev">'+esc(x.excerpt)+
+      '</div></div>').join('')||'<p class="sub">none yet</p>';}
+}
+render(F.length-1);
+</script></body></html>

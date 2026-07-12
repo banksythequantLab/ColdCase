@@ -26,6 +26,14 @@ agent resumes seamlessly across sessions — and even across crashes.
 
 ## Judge in 2 minutes
 
+**Zero-setup option:** open [`demo/index.html`](demo/) in a browser (or `cd demo
+&& python -m http.server`). It replays a **real recorded investigation** from
+embedded CockroachDB snapshots — no database, corpus, or dependencies needed.
+Drag the slider and watch the agent's suspects, hypotheses, and evidence
+accumulate across sessions.
+
+**Full option:**
+
 1. **Open the dashboard** ([live](https://coldcase.savagealgo.com)) — see the
    suspect board, the per-suspect memory trail, and the communication graph.
    The **[memory replay](https://coldcase.savagealgo.com/replay)** page lets you
