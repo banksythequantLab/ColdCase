@@ -45,6 +45,7 @@ def build_replay():
     keys = sorted(o["Key"] for o in s3.list_objects_v2(
         Bucket=bucket, Prefix="backups/").get("Contents", []))
     with db() as c:
+        mc = str(main_case(c))
         names = {str(r[0]): r[1] for r in c.execute(
             "SELECT person_id, coalesce(real_name, full_name)"
             " FROM persons WHERE person_id IN"
@@ -52,17 +53,38 @@ def build_replay():
     frames = []
     for k in keys:
         d = json.loads(s3.get_object(Bucket=bucket, Key=k)["Body"].read())
-        board = sorted(d.get("suspects", []),
+        # scope this snapshot to the main investigation only
+        hyp_ids = {str(h["hypothesis_id"]) for h in d.get("hypotheses", [])
+                   if str(h.get("case_id")) == mc}
+        d["hypotheses"] = [h for h in d.get("hypotheses", [])
+                           if str(h.get("case_id")) == mc]
+        d["findings"] = [f for f in d.get("findings", [])
+                         if str(f.get("hypothesis_id")) in hyp_ids]
+        find_ids = {str(f["finding_id"]) for f in d["findings"]}
+        d["evidence"] = [e for e in d.get("evidence", [])
+                         if str(e.get("finding_id")) in find_ids]
+        board = sorted([s for s in d.get("suspects", [])
+                        if str(s.get("case_id")) == mc],
                        key=lambda x: -float(x["suspicion_score"]))
         frames.append({
             "ts": k.split("case_")[1].replace(".json", ""),
-            "hypotheses": len(d.get("hypotheses", [])),
-            "findings": len(d.get("findings", [])),
-            "evidence": len(d.get("evidence", [])),
+            "hypotheses": [
+                {"statement": h.get("statement", ""),
+                 "status": h.get("status", "open"),
+                 "confidence": round(float(h.get("confidence") or 0), 2)}
+                for h in d.get("hypotheses", [])],
+            "findings": [
+                {"summary": f.get("summary", ""),
+                 "method": f.get("method", "")}
+                for f in d.get("findings", [])],
+            "evidence": [
+                {"excerpt": (e.get("excerpt") or "").strip(),
+                 "email_id": str(e.get("email_id", ""))[:8]}
+                for e in d.get("evidence", []) if (e.get("excerpt") or "").strip()],
             "board": [{"name": names.get(str(s["person_id"]),
                                          str(s["person_id"])[:8]),
                        "score": round(float(s["suspicion_score"]), 2),
-                       "why": (s.get("rationale") or "")[:200]}
+                       "why": (s.get("rationale") or "")[:280]}
                       for s in board]})
     return frames
 
@@ -402,32 +424,74 @@ This is only possible because the agent's memory <i>persists</i> in
 CockroachDB. A stateless chatbot would have nothing to replay.</div>
 <div class="counts">
  <div><b id="fi">-</b>frame (session snapshot)</div>
- <div><b id="hy">-</b>hypotheses</div>
- <div><b id="fn">-</b>findings</div><div><b id="ev">-</b>evidence</div>
+ <div class="tab" data-t="hy"><b id="hy">-</b>hypotheses</div>
+ <div class="tab" data-t="fn"><b id="fn">-</b>findings</div>
+ <div class="tab" data-t="ev"><b id="ev">-</b>evidence</div>
 </div>
 <input type="range" id="scrub" min="0" value="0" step="1">
 <p class="sub" id="ts"></p>
+<h3 style="color:#f0b429;margin:.6rem 0 .2rem">Suspect board</h3>
 <div id="board"></div>
+<h3 style="color:#f0b429;margin:1rem 0 .2rem" id="dtitle">Hypotheses</h3>
+<p class="sub" style="margin:.1rem 0 .5rem">Click the tiles above to switch
+between the agent's hypotheses, findings, and the evidence it collected by this
+point in the investigation.</p>
+<div id="detail"></div>
+<style>
+.tab{cursor:pointer;transition:border-color .2s}.tab:hover{border-color:#f0b429}
+.tab.sel{border-color:#f0b429;box-shadow:0 0 0 1px #f0b429}
+.item{background:#161b22;border:1px solid #30363d;border-radius:8px;
+padding:.6rem .8rem;margin:.4rem 0}
+.item .meta{color:#8b949e;font-size:.8rem;margin-bottom:.2rem}
+.badge{display:inline-block;padding:.05rem .5rem;border-radius:10px;
+font-size:.72rem;font-weight:700}
+.sup{background:#193a24;color:#3fb950}.ref{background:#3a1d1d;color:#f77}
+.opn{background:#2b2f36;color:#c9d1d9}
+.ev{font-family:ui-monospace,monospace;font-size:.82rem;color:#c9d1d9;
+white-space:pre-wrap}
+</style>
 <script>
-let F=[];
+let F=[],TAB='hy';
 fetch('api/replay').then(r=>r.json()).then(d=>{
   F=d; const s=document.getElementById('scrub');
   s.max=F.length-1; s.value=F.length-1;
-  s.oninput=()=>render(+s.value); render(F.length-1);
+  s.oninput=()=>render(+s.value);
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    TAB=t.dataset.t;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
+    t.classList.add('sel'); render(+s.value);});
+  document.querySelector('.tab[data-t=hy]').classList.add('sel');
+  render(F.length-1);
 });
+function esc(x){return (x||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 function render(i){
   const f=F[i], prev=i>0?F[i-1]:{board:[]};
   const pn=new Set(prev.board.map(b=>b.name));
   document.getElementById('fi').textContent=(i+1)+'/'+F.length;
-  document.getElementById('hy').textContent=f.hypotheses;
-  document.getElementById('fn').textContent=f.findings;
-  document.getElementById('ev').textContent=f.evidence;
+  document.getElementById('hy').textContent=f.hypotheses.length;
+  document.getElementById('fn').textContent=f.findings.length;
+  document.getElementById('ev').textContent=f.evidence.length;
   document.getElementById('ts').textContent='snapshot '+f.ts;
   document.getElementById('board').innerHTML=f.board.map(b=>
-    '<div class="row'+(pn.has(b.name)?'':' new')+'" title="'+
-    (b.why||'').replace(/"/g,'')+'"><span class="nm">'+b.name+
-    '</span><div class="bar" style="width:'+(b.score*120)+'px"></div>'+
-    '<span class="sc">'+b.score.toFixed(2)+'</span></div>').join('');
+    '<div class="row'+(pn.has(b.name)?'':' new')+'" title="'+esc(b.why)+
+    '"><span class="nm">'+b.name+'</span><div class="bar" style="width:'+
+    (b.score*120)+'px"></div><span class="sc">'+b.score.toFixed(2)+
+    '</span></div>').join('');
+  const D=document.getElementById('detail'), T=document.getElementById('dtitle');
+  if(TAB=='hy'){T.textContent='Hypotheses ('+f.hypotheses.length+')';
+    D.innerHTML=f.hypotheses.map(h=>{
+      const c=h.status=='supported'?'sup':h.status=='refuted'?'ref':'opn';
+      return '<div class="item"><span class="badge '+c+'">'+h.status+
+      ' · '+h.confidence+'</span><div style="margin-top:.3rem">'+
+      esc(h.statement)+'</div></div>';}).join('')||'<p class="sub">none yet</p>';
+  }else if(TAB=='fn'){T.textContent='Findings ('+f.findings.length+')';
+    D.innerHTML=f.findings.map(x=>'<div class="item"><div class="meta">method: '+
+      esc(x.method)+'</div>'+esc(x.summary)+'</div>').join('')
+      ||'<p class="sub">none yet</p>';
+  }else{T.textContent='Evidence ('+f.evidence.length+')';
+    D.innerHTML=f.evidence.map(x=>'<div class="item"><div class="meta">'+
+      'email '+esc(x.email_id)+' · SHA-256 on record</div><div class="ev">'+
+      esc(x.excerpt)+'</div></div>').join('')||'<p class="sub">none yet</p>';}
 }
 </script></body></html>"""
 
