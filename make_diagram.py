@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 720" font-family="system-ui,Arial" font-size="14">
+"""Generate the architecture flow diagram as a real SVG file.
+(Desktop tooling mangles direct .svg writes, so we emit it from Python.)
+"""
+SVG = r'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 720" font-family="system-ui,Arial" font-size="14">
 <rect width="560" height="720" fill="#0d1117"/>
 <defs>
 <marker id="ar" markerWidth="12" markerHeight="12" refX="6" refY="5" orient="auto"><path d="M1,1 L9,5 L1,9" fill="none" stroke="#f0b429" stroke-width="2"/></marker>
@@ -43,3 +46,8 @@
 <path d="M130 580 C 40 580, 40 331, 66 331" fill="none" stroke="#3fb950" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ar)"/>
 <text x="34" y="470" fill="#3fb950" font-size="11" transform="rotate(-90 34 470)">resume from memory</text>
 </svg>
+'''
+for path in ("docs/flow.svg", "docs/architecture.svg"):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(SVG)
+    print("wrote", path, len(SVG), "bytes")

@@ -29,28 +29,7 @@ difference. That is the entire hackathon.
 
 ## Architecture at a glance
 
-```
-        Enron emails (517,401)
-                 │
-          Embedding pipeline (local GPU)
-                 │
-                 ▼
-        ┌─────────────────────────┐
-        │       CockroachDB       │   ← the agent's memory
-        │  vectors (956,398)      │
-        │  graph (363,355 edges)  │
-        │  hypotheses · findings  │
-        │  evidence · scores      │
-        │  session state          │
-        └─────────────────────────┘
-                 │
-          Agent tool loop (local LLM, 13 tools)
-                 │
-          Persistent investigation (resumes across crashes)
-                 │
-                 ▼
-        Evaluation vs 18 real convictions
-```
+![architecture](flow.svg)
 
 ## What the memory actually stores (real counts)
 
