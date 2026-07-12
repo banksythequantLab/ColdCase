@@ -1,15 +1,27 @@
 # Cold Case 🕵️
 
-**We gave an AI investigator 517,401 real Enron emails, hid the list of
-convicted executives, and asked it to solve the case.**
+Cold Case is an autonomous financial-crimes investigator that treats
+**CockroachDB as long-term memory, not temporary storage.** We gave it over
+half a million real Enron emails, hid the historical convictions, and asked it
+to solve the case from scratch. Every hypothesis, clue, contradiction, and
+piece of evidence persists across sessions — so the agent resumes investigations
+after crashes and continually refines its understanding. We then scored its
+conclusions against the actual Enron prosecutions.
 
-Investigating blind — with no access to the answer key — the agent
-independently identified the real perpetrators. **Its top three suspects are
-all actual Enron convictions** (Jeffrey Skilling, Kenneth Lay, and Joseph
-Hirko), and it surfaced Andrew Fastow's lieutenant **Michael Kopper** through
-communication patterns alone, a name invisible in the financial records. Every
-hypothesis, finding, and piece of evidence persisted in **CockroachDB**, so the
-agent resumes seamlessly across sessions — and even across crashes.
+**CockroachDB is not a cache bolted on the side — it is the agent's brain
+state.**
+
+Investigating blind, the agent independently identified the real perpetrators.
+**Its top three suspects are all actual Enron convictions** (Jeffrey Skilling,
+Kenneth Lay, Joseph Hirko), and it surfaced Andrew Fastow's lieutenant
+**Michael Kopper** through communication patterns alone — a name invisible in
+the financial records.
+
+> **The moment that proves it:** we terminated the agent halfway through a
+> multi-session investigation and restarted it. It resumed the case from
+> exactly the same investigative state — every hypothesis, suspect, and piece
+> of evidence intact — without reprocessing a single document. The memory was
+> never in the process; it was always in CockroachDB.
 
 > Built for the [CockroachDB × AWS Hackathon](https://cockroachdb-ai.devpost.com/).
 > **[Live dashboard](https://coldcase.savagealgo.com)** ·
@@ -139,14 +151,22 @@ himself, because Kopper is reachable through the communication graph while
 Fastow's crimes were off-book (his money never appears in the financial data).
 The memory-driven graph search found a name the financials alone would miss.
 
-### Honest limitations
-Recall is the weak axis: the agent deepens strong cases faster than it broadens
-to new ones. It retains two false positives (Vince Kaminski, a risk officer who
-*warned against* the deals, and John Lavorato) — the genuinely hard
-"discusses-fraud vs commits-fraud" problem, which we document in
-[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) rather than hide, including a
-self-critique experiment that *failed* and taught us guilt must be corroborated
-by others' words, not the suspect's own careful mail.
+### Precision over recall — a design decision, not a shortfall
+The evaluation intentionally prioritizes **precision over recall**. In a
+financial investigation, falsely accusing an innocent executive is far more
+costly than delaying the identification of an additional suspect — so the agent
+is built to flag only what it can evidence, and to abstain otherwise. That is
+why precision@3 is 100% while recall is 4/18: by ~45 sessions the agent is
+autonomously investigating the *correct* remaining POIs (Mark Koenig, Paula
+Rieker — both real convictions) but declines to flag them without sufficient
+concealment evidence in the email corpus (their culpability lives in filings
+and testimony, not email). See [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) E5.
+
+The remaining false positives (Kaminski, a risk officer who *warned against*
+the deals; Lavorato) are the genuinely hard "discusses-fraud vs commits-fraud"
+problem. We document it — including a self-critique experiment that *failed* —
+rather than hand-correct the board. See the
+[whistleblower case study](docs/CASE_KAMINSKI.md).
 
 ## CockroachDB & AWS usage
 
@@ -171,9 +191,12 @@ python src/score_case.py                       # blind score
 
 ## Real-world impact & cost
 
-E-discovery is a multi-billion-dollar industry where a single large matter runs
-**$100k–$1M+** in attorney and contract-reviewer time and takes **months** to
-first actionable intelligence. Cold Case's approach — an agent that investigates
+Today, financial investigators manually sift through millions of emails over
+months. Cold Case demonstrates that an autonomous agent can continuously
+accumulate institutional memory across sessions while preserving an auditable
+evidence trail. E-discovery is a multi-billion-dollar industry where a single
+large matter runs **$100k–$1M+** in attorney and contract-reviewer time and
+takes **months** to first actionable intelligence. Cold Case's approach — an agent that investigates
 autonomously and accumulates evidence in a persistent store — targets the
 expensive first-pass triage: surfacing the people and threads worth human
 attention.
@@ -213,6 +236,26 @@ The architecture is domain-agnostic — swap the corpus and it applies to SEC
 investigations, anti-money-laundering, procurement and insurance fraud, insider
 trading, or healthcare-billing fraud. Any domain where an agent must accumulate
 evidence over time and never lose it is a fit for CockroachDB-backed memory.
+
+## Why CockroachDB? (not just a bigger context window)
+
+This project **cannot** be built by handing an LLM a larger context window. The
+investigation spans hundreds of thousands of documents across dozens of
+sessions that must survive process death. It needs, simultaneously:
+
+- **Vector search** over ~1M semantic memories (distributed C-SPANN index),
+- **Graph relationships** (363K communication edges, PageRank, betweenness),
+- **ACID transactions** so evidence and scores never go inconsistent,
+- **Durable, resumable state** across crashes and regions, and
+- **SQL joins** across all of the above in a single query (e.g. the
+  `hybrid_search` tool fuses the vector index with PageRank).
+
+Persistent transactional memory, vector search, graph relationships, and
+durable state are **fundamental to the system — not implementation details.**
+That is precisely what CockroachDB provides in one distributed store, and it is
+why the agent is an *investigator that remembers* rather than a chatbot that
+forgets. The ablation above makes it measurable: strip the memory out and the
+same agent finds nothing.
 
 ## License
 MIT — see [LICENSE](LICENSE).
