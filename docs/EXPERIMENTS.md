@@ -48,9 +48,37 @@ a person by their own carefully-curated output is what a naive system does.
 The pass is retained in `src/agent/review_pass.py` as a documented experiment;
 it is NOT part of the production scoring path.
 
-## Open problem
+## E4. Third-party reputation review — PARTIAL (the E3 follow-up)
 
-Distinguishing "discusses fraud" from "commits fraud" remains unsolved with
-local models on self-authored text alone. A promising next direction is
-*third-party stance*: classify what OTHERS say about a person (accusatory,
-deferential, warning) rather than what they say themselves.
+**Hypothesis:** E3 failed because it read a suspect's OWN mail. Judge them
+instead by what OTHERS wrote about them (`reputation` tool): keep "principals"
+(described as directing/concealing), demote "peripheral" people (associated or
+merely warning).
+
+**Result (dry-run over the 7 flagged suspects):**
+
+| suspect | verdict | correct? |
+|---|---|---|
+| Skilling | principal (keep) | ✅ real POI |
+| Kopper | principal (keep) | ✅ real POI |
+| Kaminski | peripheral (demote) | ✅ true false-positive fixed |
+| Lavorato | peripheral (demote) | ✅ true false-positive fixed |
+| Lay | peripheral (demote) | ❌ real POI, over-demoted |
+| Hirko | peripheral (demote) | ❌ real POI, over-demoted |
+
+**Why it's partial:** the signal is clearly meaningful — it correctly kept both
+unambiguous principals and correctly caught *both* false positives. But it
+over-demotes real POIs (Lay, Hirko) whose third-party accusatory evidence isn't
+present in this email corpus (Lay's culpability is mostly in financial records
+and press; Hirko's crimes were in Broadband, barely represented here). So
+applying it blindly would be net-negative (it would drop Lay and Hirko from the
+board). We therefore **keep it dry-run only** (`reputation_review.py`, no
+`--apply` in the pipeline) and leave the board unchanged.
+
+**Takeaway:** reputation is a strong *input* to the agent's live reasoning
+(which is why the `reputation` tool and corroboration rule are part of the
+investigation loop), but no single automated signal is safe as a blunt
+post-hoc re-score. Robust scoring needs to *combine* signals — reputation,
+financial anomalies, finding strength, graph position — weighted by corpus
+coverage. That combination is the real open problem, and it's exactly what a
+persistent, multi-signal memory store like CockroachDB is built to support.
