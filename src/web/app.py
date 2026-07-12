@@ -270,6 +270,11 @@ stroke-linecap:round;stroke-linejoin:round;flex:none}
 <h1><svg class="ic"><use href="#i-search"/></svg>Cold&nbsp;Case</h1>
 <p class="sub">Enron corpus &rarr; CockroachDB &middot; agentic-memory
 ingestion &middot; live</p>
+<a href="/replay" style="display:inline-flex;align-items:center;gap:.4rem;
+margin-top:.7rem;background:#21262d;border:1px solid var(--gold);color:var(--gold);
+padding:.5rem 1rem;border-radius:8px;font-weight:700;font-size:.9rem;
+text-decoration:none">
+<svg class="ic ic-h2"><use href="#i-mem"/></svg>Open Memory Replay &rarr;</a>
 <div class="card"><div class="big" id="pct">&mdash;</div>
 <div class="bar"><div class="fill" id="fill"></div></div>
 <small id="detail">loading&hellip;</small></div>

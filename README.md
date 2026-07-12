@@ -16,6 +16,10 @@ agent resumes seamlessly across sessions — and even across crashes.
 > **[AWS-hosted](http://coldcase-corpus.s3-website-us-east-1.amazonaws.com)** ·
 > MIT licensed.
 
+**Live:** [ops dashboard + suspect board + network graph](https://coldcase.savagealgo.com)
+· [memory replay](https://coldcase.savagealgo.com/replay)
+· [AWS-hosted board](http://coldcase-corpus.s3-website-us-east-1.amazonaws.com)
+
 ![architecture](docs/architecture.svg)
 
 ---
@@ -96,7 +100,13 @@ Reasoning:  Outsized, non-performance-linked payout structured around the
 | recall | 4 / 18 POIs |
 | average precision | 0.32 |
 
-Charts: `docs/pr_curve.png`, `docs/confusion.png`, `docs/board.png`.
+![evaluation](docs/pr_curve.png)
+![confusion matrix](docs/confusion.png)
+
+As memory accumulates across sessions, real POIs surface on the board (Kopper
+appears at snapshot 11) and suspect scores climb toward conviction:
+
+![memory growth](docs/memory_growth.png)
 
 ### Ablation — does persistent memory actually matter?
 
