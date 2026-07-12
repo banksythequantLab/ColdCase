@@ -5,9 +5,9 @@
 <filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 <text x="280" y="34" fill="#e9edf2" font-size="20" font-weight="800" text-anchor="middle">Cold Case - how memory flows</text>
-<rect x="170" y="56" width="220" height="52" rx="10" fill="#161b22" stroke="#2a3038"/>
-<text x="280" y="80" fill="#e9edf2" text-anchor="middle" font-weight="700">Enron emails</text>
-<text x="280" y="98" fill="#8b949e" text-anchor="middle" font-size="12">517,401 real messages</text>
+<rect x="120" y="56" width="320" height="52" rx="10" fill="#161b22" stroke="#2a3038"/>
+<text x="280" y="80" fill="#e9edf2" text-anchor="middle" font-weight="700">Enron emails + SEC filings</text>
+<text x="280" y="98" fill="#8b949e" text-anchor="middle" font-size="12">517,401 messages + 22 EDGAR filings</text>
 <line x1="280" y1="108" x2="280" y2="132" stroke="#f0b429" stroke-width="2" marker-end="url(#ar)"/>
 <rect x="150" y="134" width="260" height="52" rx="10" fill="#161b22" stroke="#2a3038"/>
 <text x="280" y="158" fill="#e9edf2" text-anchor="middle" font-weight="700">Embedding pipeline</text>

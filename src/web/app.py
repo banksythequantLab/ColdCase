@@ -192,6 +192,19 @@ def graph(limit: int = 120):
                   for e in edges]})
 
 
+@app.get("/api/filings")
+def filings():
+    """SEC filings corpus - the second evidence source in the agent's memory."""
+    with db() as c:
+        docs = c.execute(
+            "SELECT form, filed::STRING, title FROM documents"
+            " ORDER BY filed DESC LIMIT 30").fetchall()
+        nchunks = c.execute("SELECT count(*) FROM doc_chunks").fetchone()[0]
+    return JSONResponse({
+        "count": len(docs), "chunks": nchunks,
+        "filings": [{"form": r[0], "filed": r[1]} for r in docs]})
+
+
 @app.get("/api/leads")
 def leads():
     """Unexplored high-centrality people not yet on the suspect board -
@@ -306,6 +319,11 @@ text-decoration:none">
 <div class="card"><small>graph edges</small><div class="big" id="edges">?</div></div>
 </div>
 <button onclick="stats()">Refresh DB stats (costs RUs)</button>
+<h2><svg class="ic ic-h2"><use href="#i-net"/></svg>Multi-source memory</h2>
+<p class="sub">The agent reasons across two evidence sources in one CockroachDB
+memory &mdash; email and official SEC filings. The filings carry the
+related-party (LJM) disclosures the emails don't.</p>
+<div class="row" id="sources"></div>
 <h2><svg class="ic ic-h2"><use href="#i-scan"/></svg>Suspect board</h2>
 <p class="sub" id="memstats"></p>
 <div id="board"></div>
@@ -447,8 +465,21 @@ async function leads(){
     l.betweenness.toFixed(4)+(l.has_financials?' · exec':'')+'</small></div>'
   ).join('');
 }
+async function sources(){
+  const f = await (await fetch('api/filings')).json();
+  document.getElementById('sources').innerHTML =
+    '<div class="card"><small>emails</small><div class="big">517,401</div>'+
+    '<small style="text-transform:none">956,398 vector memories</small></div>'+
+    '<div class="card"><small>SEC filings</small><div class="big">'+f.count+
+    '</div><small style="text-transform:none">'+f.chunks.toLocaleString()+
+    ' chunks &middot; 10-K, proxy, 8-Ks</small></div>'+
+    '<div class="card"><small>one memory</small><div class="big" '+
+    'style="color:#58a6ff">CockroachDB</div><small style="text-transform:none">'+
+    'joined by vector + SQL</small></div>';
+}
 tick(); setInterval(tick, 5000);
 board(); setInterval(board, 30000);
+sources();
 leads(); setInterval(leads, 60000);
 trail(); setInterval(trail, 30000);
 setTimeout(drawGraph, 800);

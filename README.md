@@ -309,6 +309,20 @@ by pointing the ingest at a new corpus). Any domain where an agent must
 accumulate evidence over time and never lose it is a fit for CockroachDB-backed
 memory.
 
+## Multi-source memory (email + SEC filings)
+
+Cold Case reasons across **two evidence sources joined in one CockroachDB
+memory**: the 517,401 emails, and **22 of Enron's official SEC filings** pulled
+from EDGAR (the FY2000 10-K, the DEF 14A proxy, and the 2001–2002 restatement
+8-Ks — 541 embedded chunks in a second C-SPANN index). This directly targets
+the recall frontier: several real POIs (notably CFO Andrew Fastow) barely
+appear in email — their culpability lives in the **related-party (LJM)
+disclosures** in the filings. The agent's `search_filings` tool lets it
+corroborate an email lead against the official financial record, exactly as a
+human investigator cross-references discovery documents against filings. One
+store, two sources, joined by vector search and SQL — not two systems bolted
+together.
+
 ## Why this isn't just RAG
 
 Traditional RAG retrieves documents and forgets every investigation the moment
