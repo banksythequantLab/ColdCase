@@ -38,19 +38,19 @@ def wrap(inner):
 # (kind, content, narration)  kind: 'html' slide or 'img' existing PNG
 SCENES = [
  ("html", wrap("""<div class=kick>One SQL statement &middot; five agents &middot; one CockroachDB</div>
-   <h2>Cold Case missed Fastow. <span class=grn>The suite didn't.</span></h2>
+   <h2>Cold Case named four ringleaders. <span class=grn>Only the suite caught Fastow.</span></h2>
    <div class=board style="margin-top:42px">
-     <div><span class="ag red">Cold Case</span><span style="color:#8b949e">&mdash; nothing</span></div>
-     <div><span class="ag grn">Witness</span>2 sworn contradictions</div>
-     <div><span class="ag gold">Chronicle</span>LJM2 self-dealing timeline</div>
-     <div><span class="ag blu">Gap Hunter</span>3 withheld documents</div>
-     <div><span class="ag pur">Hold Firewall</span>hold on 200 docs, ACID</div>
+     <div><span class="ag">Cold Case</span>Skilling &middot; Lay &middot; Kopper &middot; Hirko &mdash; 4/18</div>
+     <div><span class="ag">Witness</span>2 sworn contradictions</div>
+     <div><span class="ag">Chronicle</span>LJM2 self-dealing timeline</div>
+     <div><span class="ag">Gap Hunter</span>3 withheld documents</div>
+     <div><span class="ag">Hold Firewall</span>hold on 200 docs, ACID</div>
    </div>
-   <p style="font-size:40px">No single agent saw him. <b class=gold>The entwined memory did.</b></p>"""),
-  "Andrew Fastow was the architect of the Enron fraud, yet he is nearly invisible "
-  "in the email. Cold Case never flagged him. But because five agents share one "
-  "CockroachDB memory, a single SQL query assembles his complete case file: his "
-  "contradictions, his timeline, and his withheld documents, from all of them at once."),
+   <p style="font-size:40px">Fastow was near-invisible in email &mdash; no single agent could catch him. <b class=gold>The entwined memory did.</b></p>"""),
+  "Cold Case independently names four convicted ringleaders: Skilling, Lay, Kopper, "
+  "and Hirko. But Fastow, the architect, was near-invisible in email. Yet one SQL "
+  "query over the shared CockroachDB memory assembles his whole case file. No single "
+  "agent could solve it; the entwined memory did."),
 
  ("img", r"B:\ediscovery-suite\docs\hero.png",
   "This is Not A Lawyer: five specialized e-discovery agents feeding one "
@@ -88,19 +88,19 @@ SCENES += [
   "nowhere. Vectors, graph joins, and A-C-I-D, in one engine. That is why CockroachDB."),
 
  ("html", wrap("""<div class=kick>The database enforces what the law demands</div>
-   <h2>Ethical walls &amp; <span class=blu>data sovereignty</span></h2>
+   <h2>Ethical walls &amp; <span class=blu>proven resilience</span></h2>
    <div class=row style="margin-top:40px">
-     <div class=stat><div class="n" style="font-size:60px;color:#3fb950">RLS</div>
-       <div class=l style="text-transform:none;font-size:30px;margin-top:20px">Row-level security: a reviewer
+     <div class=stat><div class="n" style="font-size:56px;color:#3fb950">RLS</div>
+       <div class=l style="text-transform:none;font-size:29px;margin-top:18px">Row-level security: a reviewer
        <b>physically cannot</b> read another matter or a privileged document &mdash; zero rows, not filtered in code.</div></div>
-     <div class=stat><div class="n" style="font-size:60px;color:#58a6ff">EU&nbsp;&rarr;&nbsp;EU</div>
-       <div class=l style="text-transform:none;font-size:30px;margin-top:20px">Multi-region <b>REGIONAL BY ROW</b>: London
-       custodians pinned to europe-west1 for GDPR &mdash; surviving a full regional outage.</div></div>
+     <div class=stat><div class="n" style="font-size:40px">EU region <span style="color:#f85149">OFFLINE</span> &rarr; <span style="color:#3fb950">0 lost</span></div>
+       <div class=l style="text-transform:none;font-size:29px;margin-top:18px">Take the entire <b>europe-west1</b> region down &mdash;
+       all <b>6 legal holds survive</b>, including the 2 GDPR-pinned EU rows. SURVIVE REGION FAILURE, proven.</div></div>
    </div>"""),
-  "The database enforces the guarantees legal work demands. Row-level security "
-  "walls off privileged and cross-matter data: a reviewer physically cannot read "
-  "it. And multi-region domiciling pins European custodian data to Europe for "
-  "G-D-P-R, surviving a full regional cloud outage."),
+  "The database enforces what the law demands. Row-level security walls off "
+  "privileged and cross-matter data -- a reviewer physically cannot read it. And "
+  "when we take the entire European region offline, every legal hold survives: "
+  "zero lost, even the GDPR-pinned EU rows. Data residency and resilience, proven."),
 
  ("html", wrap("""<div class=kick>Managed MCP Server &middot; audit in plain English</div>
    <h2>Interrogate the whole case memory, live</h2>
