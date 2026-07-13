@@ -26,12 +26,12 @@ the financial records.
 > never in the process; it was always in CockroachDB.
 
 > Built for the [CockroachDB × AWS Hackathon](https://cockroachdb-ai.devpost.com/).
-> **[Live dashboard](https://coldcase.savagealgo.com)** ·
+> **[Live dashboard](https://coldcase.nota.lawyer)** ·
 > **[AWS-hosted](http://coldcase-corpus.s3-website-us-east-1.amazonaws.com)** ·
 > MIT licensed.
 
-**Live:** [ops dashboard + suspect board + network graph](https://coldcase.savagealgo.com)
-· [memory replay](https://coldcase.savagealgo.com/replay)
+**Live:** [ops dashboard + suspect board + network graph](https://coldcase.nota.lawyer)
+· [memory replay](https://coldcase.nota.lawyer/replay)
 · [AWS-hosted board](http://coldcase-corpus.s3-website-us-east-1.amazonaws.com)
 
 ![architecture](docs/architecture.svg)
@@ -64,9 +64,9 @@ accumulate across sessions.
 
 **Full option:**
 
-1. **Open the dashboard** ([live](https://coldcase.savagealgo.com)) — see the
+1. **Open the dashboard** ([live](https://coldcase.nota.lawyer)) — see the
    suspect board, the per-suspect memory trail, and the communication graph.
-   The **[memory replay](https://coldcase.savagealgo.com/replay)** page lets you
+   The **[memory replay](https://coldcase.nota.lawyer/replay)** page lets you
    scrub through the investigation's history and watch suspects appear and rise
    as the agent accumulates evidence across sessions.
 2. **Watch it investigate:** `python src/agent/investigator.py` streams the

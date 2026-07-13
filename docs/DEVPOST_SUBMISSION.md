@@ -88,7 +88,7 @@ per-token cost, embeddings run on-prem (fastembed / all-MiniLM-L6-v2, 384-dim)
 and the agent brain is a local Qwen3-30B via Ollama. CockroachDB is the one
 piece that has to be always-on and consistent — which is exactly the point.
 
-**Live dashboard:** a FastAPI app (coldcase.savagealgo.com via Cloudflare
+**Live dashboard:** a FastAPI app (coldcase.nota.lawyer via Cloudflare
 tunnel) shows ingestion, the suspect board, and case-memory stats in real time.
 
 ## Which CockroachDB tools we used and how
@@ -122,4 +122,4 @@ and deploying the agent runtime on AWS Lambda/ECS for the hosted demo.
 ## Try it
 
 - Code: https://github.com/banksythequantLab/ColdCase (MIT)
-- Live dashboard: https://coldcase.savagealgo.com
+- Live dashboard: https://coldcase.nota.lawyer

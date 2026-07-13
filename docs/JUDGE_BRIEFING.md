@@ -6,8 +6,8 @@ to see the code to evaluate it. It is deliberately honest about weaknesses.*
 
 **Links**
 - Code (MIT): https://github.com/banksythequantLab/ColdCase
-- Live dashboard: https://coldcase.savagealgo.com
-- Memory replay: https://coldcase.savagealgo.com/replay
+- Live dashboard: https://coldcase.nota.lawyer
+- Memory replay: https://coldcase.nota.lawyer/replay
 - AWS-hosted board: http://coldcase-corpus.s3-website-us-east-1.amazonaws.com
 - Zero-setup offline demo: `demo/index.html` in the repo
 - Full criterion-mapped judge guide: `docs/FOR_JUDGES.md`
@@ -155,7 +155,7 @@ third parties, not the suspect's own careful mail), and "breadth over depth"
 
 ## 7. Dashboards / visualisation
 
-Live at coldcase.savagealgo.com (Inter typography, SVG icon set, no emoji):
+Live at coldcase.nota.lawyer (Inter typography, SVG icon set, no emoji):
 - Suspect board with tiered-colour scores and rationales.
 - A force-directed communication graph: glowing labelled suspect nodes,
   influence-sized employee nodes, hover-to-trace a person's contacts, drag.

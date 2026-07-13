@@ -91,5 +91,5 @@ SLIDES = [
     </div>
     <p style="font-size:52px;margin-top:56px"><b class=gold>CockroachDB turns a
     database into an e-discovery tool.</b></p>
-    <p style="font-size:34px;color:#8b949e">github.com/banksythequantLab/ColdCase &middot; coldcase.savagealgo.com</p>"""),
+    <p style="font-size:34px;color:#8b949e">github.com/banksythequantLab/ColdCase &middot; coldcase.nota.lawyer</p>"""),
 ]

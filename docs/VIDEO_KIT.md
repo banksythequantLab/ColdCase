@@ -5,8 +5,8 @@ narration (left) synced to exact on-screen actions (right). Read the narration
 at a calm pace; each block is timed. Record at 1920×1080.
 
 **Before you start:** open three browser tabs —
-1. `https://coldcase.savagealgo.com` (dashboard)
-2. `https://coldcase.savagealgo.com/replay` (memory replay)
+1. `https://coldcase.nota.lawyer` (dashboard)
+2. `https://coldcase.nota.lawyer/replay` (memory replay)
 3. a terminal in `B:\ColdCase`
 Have `python src/agent/investigator.py` ready to paste, and `python
 src/score_case.py` ready. Full-screen the browser, hide bookmarks.

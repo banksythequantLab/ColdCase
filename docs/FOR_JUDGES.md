@@ -5,7 +5,7 @@ persistent memory** to solve the Enron fraud case *blind*, then is scored
 against the real convictions. Built for the CockroachDB × AWS Hackathon.
 
 - **Code:** https://github.com/banksythequantLab/ColdCase (MIT)
-- **Live dashboard (Cloudflare):** https://coldcase.savagealgo.com
+- **Live dashboard (Cloudflare):** https://coldcase.nota.lawyer
 - **AWS-hosted dashboard (S3):** http://coldcase-corpus.s3-website-us-east-1.amazonaws.com
 
 ---
