@@ -260,39 +260,58 @@ def suspects():
 
 @app.get("/api/casefile")
 def casefile(name: str = "Fastow"):
-    """Unified cross-agent case file: ONE SQL statement spanning all five
-    agents' schemas in one CockroachDB database. The entwinement, live."""
-    sql = """
-    SELECT 'ColdCase' agent, concat('suspicion ',
-           round(s.suspicion_score::numeric,2)::string, ' -- ',
-           left(coalesce(s.rationale,''),90)) detail
-      FROM suspects s JOIN persons p USING(person_id)
-      WHERE p.full_name ILIKE %(n)s OR coalesce(p.real_name,'') ILIKE %(n)s
-    UNION ALL
-    SELECT 'Witness', left(st.claim,120)
-      FROM witness.contradictions c
-      JOIN witness.witnesses w ON w.witness_id=c.witness_id
-      JOIN witness.statements st ON st.statement_id=c.statement_id
-      WHERE w.full_name ILIKE %(n)s
-    UNION ALL
-    SELECT 'Chronicle', concat(e.event_date::string,'  ',e.description)
-      FROM chronicle.events e JOIN chronicle.event_actors a
-        ON a.event_id=e.event_id
-      WHERE a.actor ILIKE %(n)s AND e.active
-    UNION ALL
-    SELECT 'GapHunter', concat(g.target_key,' [',g.status,'] ',
-           coalesce(g.channel_hint,''))
-      FROM gaphunter.gaps g WHERE g.subject ILIKE %(n)s
-    ORDER BY 1"""
+    """Unified cross-agent case file across all five agents in one CockroachDB
+    database, joined on a RESOLVED identity (identity.entities/aliases) rather
+    than a raw name -- separating Andrew Fastow from Lea, and Jeffrey Skilling
+    from the other Skillings. Cold Case matches on the resolved person_ids."""
     with db() as c:
-        rows = c.execute(sql, {"n": f"%{name}%"}).fetchall()
-        held = c.execute(
-            "SELECT count(*) FROM hold_docs WHERE held").fetchone()[0]
-    agents = {}
-    for agent, detail in rows:
-        agents.setdefault(agent, []).append(detail)
-    return JSONResponse({"name": name, "agents": agents, "held": held,
-                         "coldcase_hit": "ColdCase" in agents})
+        ent = c.execute(
+            "SELECT e.entity_id, e.canonical FROM identity.entities e "
+            "JOIN identity.aliases a ON a.entity_id=e.entity_id "
+            "WHERE a.alias ILIKE %s OR e.canonical ILIKE %s LIMIT 1",
+            (f"%{name}%", f"%{name}%")).fetchone()
+        if ent:
+            eid, canonical = ent
+            pids = [r[0] for r in c.execute(
+                "SELECT person_id FROM identity.aliases "
+                "WHERE entity_id=%s AND person_id IS NOT NULL", (eid,)).fetchall()]
+            nalias = c.execute("SELECT count(*) FROM identity.aliases "
+                               "WHERE entity_id=%s", (eid,)).fetchone()[0]
+        else:
+            canonical, pids, nalias = name, [], 0
+        surname = f"%{canonical.split()[-1]}%"
+        agents = {}
+        if pids:                      # Cold Case via RESOLVED person_ids (precise)
+            cc = c.execute(
+                "SELECT concat('suspicion ', round(s.suspicion_score::numeric,2)::string,"
+                "' -- ', left(coalesce(s.rationale,''),90)) FROM suspects s "
+                "WHERE s.person_id = ANY(%s)", (pids,)).fetchall()
+        else:
+            cc = c.execute(
+                "SELECT concat('suspicion ', round(s.suspicion_score::numeric,2)::string,"
+                "' -- ', left(coalesce(s.rationale,''),90)) FROM suspects s "
+                "JOIN persons p USING(person_id) WHERE p.full_name ILIKE %s "
+                "OR coalesce(p.real_name,'') ILIKE %s", (surname, surname)).fetchall()
+        if cc: agents["ColdCase"] = [r[0] for r in cc]
+        wit = c.execute(
+            "SELECT left(st.claim,120) FROM witness.contradictions cc "
+            "JOIN witness.witnesses w ON w.witness_id=cc.witness_id "
+            "JOIN witness.statements st ON st.statement_id=cc.statement_id "
+            "WHERE w.full_name ILIKE %s", (surname,)).fetchall()
+        if wit: agents["Witness"] = [r[0] for r in wit]
+        chrn = c.execute(
+            "SELECT concat(e.event_date::string,'  ',e.description) FROM chronicle.events e "
+            "JOIN chronicle.event_actors a ON a.event_id=e.event_id "
+            "WHERE a.actor ILIKE %s AND e.active", (surname,)).fetchall()
+        if chrn: agents["Chronicle"] = [r[0] for r in chrn]
+        gap = c.execute(
+            "SELECT concat(g.target_key,' [',g.status,'] ',coalesce(g.channel_hint,'')) "
+            "FROM gaphunter.gaps g WHERE g.subject ILIKE %s", (surname,)).fetchall()
+        if gap: agents["GapHunter"] = [r[0] for r in gap]
+        held = c.execute("SELECT count(*) FROM hold_docs WHERE held").fetchone()[0]
+    return JSONResponse({"name": canonical, "resolved_aliases": nalias,
+                         "person_records": len(pids), "agents": agents,
+                         "held": held, "coldcase_hit": "ColdCase" in agents})
 
 
 PAGE = """<!doctype html><html><head><title>Cold Case Ops</title>
@@ -534,6 +553,10 @@ async function casefile(name){
   const order=['ColdCase','Witness','Chronicle','GapHunter'];
   const col={ColdCase:'#f85149',Witness:'#3fb950',Chronicle:'#d29922',GapHunter:'#58a6ff'};
   let html='';
+  html+='<div style="font-size:.82rem;color:#8b949e;margin:.1rem 0 .6rem">'+
+    'entity resolution &rarr; <b style="color:#e6edf3">'+d.name+'</b>'+
+    (d.person_records?' &middot; unified '+d.person_records+' person records &amp; '+
+     d.resolved_aliases+' aliases into one identity':'')+'</div>';
   if(!d.coldcase_hit){
     html+='<div class="card" style="background:#3a1d1d;border:1px solid #f85149">'+
       '<b style="color:#f77">Cold Case alone missed '+name+'.</b> The same '+
