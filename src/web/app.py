@@ -24,6 +24,16 @@ def db():
     return psycopg.connect(os.environ["CRDB_ADMIN_URL"])
 
 
+def db_follower():
+    """A connection serving bounded-staleness FOLLOWER READS (~4.8s in the past
+    via follower_read_timestamp()). Read-heavy dashboard queries are served from
+    any replica and never block on Hold Firewall's contended write intents --
+    read load is isolated from the write path. CockroachDB-native read scaling."""
+    c = psycopg.connect(os.environ["CRDB_ADMIN_URL"], autocommit=True)
+    c.execute("BEGIN AS OF SYSTEM TIME follower_read_timestamp()")
+    return c
+
+
 def main_case(c):
     """The primary accumulated case (excludes ablation/experiment cases)."""
     r = c.execute(
@@ -209,7 +219,8 @@ def filings():
 def leads():
     """Unexplored high-centrality people not yet on the suspect board -
     the agent's next investigative leads (addresses the recall frontier)."""
-    with db() as c:
+    c = db_follower()          # served from a replica, isolated from the write path
+    try:
         mc = main_case(c)
         rows = c.execute("""
           SELECT coalesce(p.real_name, p.full_name), pp.pagerank,
@@ -221,6 +232,9 @@ def leads():
               SELECT person_id FROM suspects WHERE case_id=%s)
             AND p.full_name ILIKE '%%@enron.com'
           ORDER BY pp.betweenness DESC LIMIT 8""", (mc,)).fetchall()
+        c.execute("COMMIT")
+    finally:
+        c.close()
     return JSONResponse({"leads": [
         {"name": r[0], "pagerank": round(float(r[1]), 5),
          "betweenness": round(float(r[2]), 5), "has_financials": r[3]}
