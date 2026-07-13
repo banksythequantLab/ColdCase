@@ -1,0 +1,6 @@
+file 'B:\ColdCase\video\s_clip0.mp4'
+file 'B:\ColdCase\video\s_clip1.mp4'
+file 'B:\ColdCase\video\s_clip2.mp4'
+file 'B:\ColdCase\video\s_clip3.mp4'
+file 'B:\ColdCase\video\s_clip4.mp4'
+file 'B:\ColdCase\video\s_clip5.mp4'

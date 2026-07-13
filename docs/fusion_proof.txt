@@ -1,0 +1,34 @@
+FUSION RETRIEVAL  query: "off-book related-party partnership self-dealing LJM special purpose entity hidden losses CFO enrichment"
+
+PURE VECTOR (C-SPANN) top 8:
+    per.sekse@enron.com                vsim=0.539
+    richard.lydecker@enron.com         vsim=0.539
+    randal.maffett@enron.com           vsim=0.537
+    jordan.mintz@enron.com             vsim=0.536
+    mary.cilia@enron.com               vsim=0.536
+    mrha@enron.com                     vsim=0.536
+    a..hughes@enron.com                vsim=0.535
+    chairman.ken@enron.com             vsim=0.535
+
+FUSED vector + 363K-edge graph, top 8 (one SQL statement):
+    william.bradford@enron.com     v=0.53 g=  9.9 score=0.514
+    KITCHEN LOUISE                 v=0.00 g= 20.1 score=0.500  <- graph-only, vector missed
+    sara.shackleton@enron.com      v=0.00 g= 19.1 score=0.475  <- graph-only, vector missed
+    s..bradford@enron.com          v=0.53 g=  7.4 score=0.449
+    tanya.rohauer@enron.com        v=0.53 g=  7.2 score=0.447
+    paul.radous@enron.com          v=0.53 g=  7.1 score=0.445
+    COLWELL WESLEY                 v=0.53 g=  5.6 score=0.405
+    LAVORATO JOHN J                v=0.00 g= 16.1 score=0.400  <- graph-only, vector missed
+
+GRAPH-ONLY finds in fused top-20 (vsim~0, surfaced purely by the graph): 4
+    KITCHEN LOUISE                     graph_score=20.1  (real fraud-network figure the vector ranked nowhere)
+    sara.shackleton@enron.com          graph_score=19.1  (real fraud-network figure the vector ranked nowhere)
+    LAVORATO JOHN J                    graph_score=16.1  (real fraud-network figure the vector ranked nowhere)
+    elizabeth.sager@enron.com          graph_score=12.6  (real fraud-network figure the vector ranked nowhere)
+
+HONEST LIMIT: Andrew Fastow is NOT surfaced even by fusion -- he is minimally
+present in BOTH email modalities (few sent mails; low-volume edges). His
+signal is in the SEC filings (Chronicle) and off-channel gaps (Gap Hunter).
+That is exactly why the suite ENTWINES email retrieval with the filing agents:
+no single modality -- vector, graph, or even fused -- finds him. The entwined
+cross-agent memory does.
