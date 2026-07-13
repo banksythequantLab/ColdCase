@@ -120,6 +120,46 @@ SCENES += [
   "It is legally defensible evidence."),
 ]
 
+# --- live Memory Replay scene (real UI screen recording), inserted after the hero at assembly ---
+CLIP_SRC = r"C:\Users\solti\Videos\Screen Recordings\Screen Recording 2026-07-13 003013.mp4"
+CAP_HTML = """<!doctype html><html><head><meta charset=utf-8>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;
+ background:radial-gradient(ellipse at 24% 16%,#131c2b 0%,#0d1117 62%,#0a0e13 100%);
+ font-family:Inter,sans-serif;color:#e9edf2}
+.frame{position:absolute;left:96px;top:52px;width:836px;height:956px;
+ border:2px solid #2f3743;border-radius:22px;background:#0b0f14}
+.cap{position:absolute;left:988px;top:150px;width:852px}
+.kick{color:#f0b429;font-weight:800;font-size:29px;letter-spacing:.14em;text-transform:uppercase}
+h2{font-size:58px;font-weight:900;line-height:1.06;margin-top:22px;letter-spacing:-.02em}
+.gold{color:#f0b429}
+ul{margin-top:46px;list-style:none}
+li{font-size:32px;color:#c9d1d9;font-weight:500;margin:28px 0;padding-left:40px;position:relative;line-height:1.32}
+li:before{content:'';position:absolute;left:0;top:13px;width:16px;height:16px;border-radius:4px;background:#f0b429}
+li.g:before{background:#3fb950}
+</style></head><body>
+<div class=frame></div>
+<div class=cap>
+  <div class=kick>Live &#183; Memory Replay</div>
+  <h2>Time-travel through the agent's <span class=gold>persisted memory</span></h2>
+  <ul>
+    <li>31 snapshots &#8212; CockroachDB &#8594; Amazon S3</li>
+    <li>drag to replay every hypothesis, finding &amp; guilt score</li>
+    <li class=g>green = a suspect the agent just uncovered</li>
+    <li>it lives in the database &#8212; a chatbot has nothing to replay</li>
+  </ul>
+</div></body></html>"""
+
+SCENES += [
+ ("clip", (CLIP_SRC, CAP_HTML),
+  "This is that memory, replayed. Every session, the agent snapshots its entire "
+  "state -- every hypothesis, finding, piece of evidence, and guilt score -- from "
+  "CockroachDB to Amazon S3. Drag the slider, and you watch its thinking evolve, "
+  "snapshot by snapshot. A stateless chatbot has nothing to replay."),
+]
+
 
 def clone(text, out_wav):
     if os.path.exists(out_wav) and os.path.getsize(out_wav) > 4000:
@@ -148,21 +188,40 @@ def main():
     for i, (kind, content, text) in enumerate(SCENES):
         wav = os.path.join(HERE, f"v2_seg{i}.wav"); clone(text, wav)
         img = os.path.join(HERE, f"v2_img{i}.png")
-        if kind == "html": render_html(content, img)
-        else: img = content
         d = dur(wav) + 0.55
         clip = os.path.join(HERE, f"v2_clip{i}.mp4")
-        subprocess.run(["ffmpeg", "-y", "-loop", "1", "-i", img, "-i", wav,
-            "-c:v", "libx264", "-t", f"{d:.2f}", "-pix_fmt", "yuv420p",
-            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,"
-                   "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=#0d1117,setsar=1",
-            "-c:a", "aac", "-b:a", "160k", "-af", "apad=pad_dur=0.45", clip], check=True)
+        if kind == "clip":
+            clip_src, cap_html = content
+            render_html(cap_html, img)                      # dark canvas + caption + empty frame
+            subprocess.run(["ffmpeg", "-y", "-loop", "1", "-t", f"{d:.2f}", "-i", img,
+                "-ss", "2.0", "-i", clip_src, "-i", wav,
+                "-filter_complex",
+                "[1:v]scale=-2:930,setsar=1[v];[0:v][v]overlay=112:65:shortest=0,setsar=1[o]",
+                "-map", "[o]", "-map", "2:a", "-c:v", "libx264", "-t", f"{d:.2f}",
+                "-r", "25", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
+                "-af", "apad=pad_dur=0.45", clip], check=True)
+        else:
+            if kind == "html": render_html(content, img)
+            else: img = content
+            subprocess.run(["ffmpeg", "-y", "-loop", "1", "-i", img, "-i", wav,
+                "-c:v", "libx264", "-t", f"{d:.2f}", "-r", "25", "-pix_fmt", "yuv420p",
+                "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,"
+                       "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=#0d1117,setsar=1",
+                "-c:a", "aac", "-b:a", "160k", "-af", "apad=pad_dur=0.45", clip], check=True)
         clips.append(clip); print(f"scene {i}: {d:.1f}s ({kind})")
-    listf = os.path.join(HERE, "v2_clips.txt")
-    open(listf, "w").write("\n".join(f"file '{c}'" for c in clips))
+    # concat order: memory scene (built last) slots in right after the hero
+    order = [0, 1, len(SCENES) - 1] + list(range(2, len(SCENES) - 1))
+    ordered = [clips[k] for k in order]
     final = os.path.join(HERE, "nota_suite_demo_v2.mp4")
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listf,
-        "-c", "copy", final], check=True)
+    args = ["ffmpeg", "-y"]
+    for c in ordered:
+        args += ["-i", c]
+    fc = "".join(f"[{k}:v:0][{k}:a:0]" for k in range(len(ordered)))
+    fc += f"concat=n={len(ordered)}:v=1:a=1[v][a]"
+    args += ["-filter_complex", fc, "-map", "[v]", "-map", "[a]",
+             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "25",
+             "-c:a", "aac", "-b:a", "160k", final]
+    subprocess.run(args, check=True)
     print(f"\nDONE -> {final} ({os.path.getsize(final)//1024} KB, {dur(final):.0f}s)")
 
 if __name__ == "__main__":
