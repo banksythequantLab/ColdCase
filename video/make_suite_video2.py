@@ -53,9 +53,9 @@ SCENES = [
   "contradictions, his timeline, and his withheld documents, from all of them at once."),
 
  ("img", r"B:\ediscovery-suite\docs\hero.png",
-  "This is Nota dot Lawyer: five specialized e-discovery agents feeding one "
+  "This is Not A Lawyer: five specialized e-discovery agents feeding one "
   "transactional memory, which produces a single unified case file. Not chat "
-  "history, not a vector cache. And with memory off, every agent's result "
+  "history, not a vector cache. With memory off, every agent's result "
   "collapses. Persistence is the whole product."),
 
  ("img", r"B:\Chronicle\docs\suite_ablations.png",
@@ -154,10 +154,25 @@ li.g:before{background:#3fb950}
 
 SCENES += [
  ("clip", (CLIP_SRC, CAP_HTML),
-  "This is that memory, replayed. Every session, the agent snapshots its entire "
-  "state -- every hypothesis, finding, piece of evidence, and guilt score -- from "
-  "CockroachDB to Amazon S3. Drag the slider, and you watch its thinking evolve, "
-  "snapshot by snapshot. A stateless chatbot has nothing to replay."),
+  "This is that memory, replayed. Each session snapshots the agent's full state "
+  "to CockroachDB and S3. Drag the slider, and its thinking evolves -- a stateless "
+  "chatbot has nothing to replay."),
+]
+
+# --- Enron corpus intro (opening scene) ---
+SCENES += [
+ ("html", wrap("""<div class=kick>The evidence &middot; real data</div>
+   <h2>Half a million real emails from <span class=grn>history's largest fraud</span></h2>
+   <div class=row>
+     <div class=stat><div class=n>517,401</div><div class=l>Enron emails</div></div>
+     <div class=stat><div class=n>22</div><div class=l>SEC filings</div></div>
+     <div class=stat><div class=n>18</div><div class=l>convicted execs</div></div>
+   </div>
+   <p style="font-size:38px">The benchmark corpus for legal e-discovery &mdash; and because we
+   know who was convicted, it's <b class=gold>ground truth we can measure against.</b></p>"""),
+  "First, the data. Enron's collapse was one of history's largest corporate frauds, "
+  "leaving half a million real emails and the company's SEC filings. Known convictions "
+  "give us ground truth to measure against."),
 ]
 
 
@@ -209,8 +224,9 @@ def main():
                        "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=#0d1117,setsar=1",
                 "-c:a", "aac", "-b:a", "160k", "-af", "apad=pad_dur=0.45", clip], check=True)
         clips.append(clip); print(f"scene {i}: {d:.1f}s ({kind})")
-    # concat order: memory scene (built last) slots in right after the hero
-    order = [0, 1, len(SCENES) - 1] + list(range(2, len(SCENES) - 1))
+    # concat order: Enron corpus intro (9), then hero (1), Fastow (0), live memory (8),
+    # then ablations/spoliation/fusion/enterprise/MCP/close (2-7).
+    order = [9, 1, 0, 8, 2, 3, 4, 5, 6, 7]
     ordered = [clips[k] for k in order]
     final = os.path.join(HERE, "nota_suite_demo_v2.mp4")
     args = ["ffmpeg", "-y"]
