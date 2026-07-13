@@ -8,3 +8,10 @@ slide*.html
 _wrap.html
 clips.txt
 clips2.txt
+# v2 suite-video build intermediates (keep make_suite_video2.py + nota_suite_demo_v2.mp4)
+v2_seg*.wav
+v2_clip*.mp4
+v2_img*.png
+v2_img*.html
+v2_clips.txt
+frame_*.png
