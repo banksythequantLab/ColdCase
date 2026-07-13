@@ -10,9 +10,19 @@ LJM architect it had been missing from email alone?
 
 | Metric | Before filings | After re-run |
 |---|---|---|
-| precision@3 | 100% | 100% |
+| precision@3 | 100% (n=3) | 100% (n=3) |
 | precision@5 | 80% | 80% |
-| recall vs 18 POIs | 4/18 (22%) | **4/18 (22%)** |
+| precision@10 | 50% | 50% |
+| recall@3 | 3/18 (17%) | 3/18 (17%) |
+| recall@5 | 4/18 (22%) | 4/18 (22%) |
+| recall@10 | 4/18 (22%) | 4/18 (22%) |
+| recall (all) vs 18 POIs | 4/18 (22%) | **4/18 (22%)** |
+
+**Read the recall column, not just precision.** `precision@3 = 100%` is on only
+three items and is easy to over-read; the honest headline is **recall 4/18
+(22%)** — the agent flags a small, high-confidence set. Precision-over-recall is
+a deliberate design choice (the cost of a false public accusation is
+asymmetric), but the recall ceiling here is real and set by the corpus, not hidden.
 
 The agent re-confirmed Skilling, Lay, Kopper, and Hirko. Fastow was **not**
 surfaced — 0 suspect events on any Fastow identity across the re-run.
