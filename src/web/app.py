@@ -127,7 +127,7 @@ def progress():
         if ln.startswith("DONE:"):
             out["done"] = True
             out["ingested"] = base + int(re.search(r"(\d+) ingested", ln)[1])
-    out["pct"] = round(100 * out["ingested"] / TOTAL_EST, 1)
+    out["pct"] = min(100.0, round(100 * out["ingested"] / TOTAL_EST, 1))  # never exceed 100%
     return JSONResponse(out)
 
 
