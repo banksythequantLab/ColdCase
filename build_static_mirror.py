@@ -29,7 +29,8 @@ def get(path):
         return r.read().decode("utf-8", "replace")
 
 def slug(name):
-    return re.sub(r"[^a-z0-9]+", "_", str(name)).strip("_").lower()
+    # must match the JS shim: /[^a-z0-9]+/gi -> "_", trim, lowercase
+    return re.sub(r"[^a-z0-9]+", "_", str(name), flags=re.I).strip("_").lower()
 
 # 1. no-param API endpoints -> api/<name>.json
 endpoints = ["stats", "progress", "leads", "suspects", "graph", "timeline", "filings", "replay"]
@@ -52,6 +53,8 @@ for key in ("suspects", "leads"):
         if isinstance(row, dict):
             for k in ("name", "nm", "full_name", "real_name", "person"):
                 if row.get(k): names.add(row[k]); break
+# the Unified case file chips call /api/casefile?name=<short> (CFPEOPLE in the UI)
+names.update(["Skilling", "Fastow", "Lay", "Causey", "Kopper"])
 for nm in sorted(names):
     try:
         txt = get("/api/casefile?name=" + urllib.request.quote(nm))
