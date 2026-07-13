@@ -1,0 +1,142 @@
+<!doctype html><html><head><meta charset="utf-8"><script>
+// static-mirror fetch shim: repoint live API calls to snapshot JSON files
+(function(){const _f=window.fetch;window.fetch=function(u,o){try{
+ if(typeof u==='string'&&/(^|\/)api\//.test(u)){
+   var m=u.match(/api\/casefile\?name=(.+)$/);
+   if(m){u='api/casefile_'+decodeURIComponent(m[1]).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'').toLowerCase()+'.json';}
+   else{u=u.replace(/^\/?api\/([a-z_]+).*$/,'api/$1.json');}
+ }}catch(e){}return _f(u,o);};})();
+</script><meta charset="utf-8">
+<title>Cold Case — Memory Replay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#2a3038;--gold:#f0b429;
+--ink:#e9edf2;--mut:#8b949e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);
+font-family:'Inter',system-ui,sans-serif;margin:0 auto;
+padding:2.6rem 1.5rem 4rem;max-width:768px;line-height:1.6;
+letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .15rem;
+display:flex;align-items:center;gap:.55rem}
+h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;color:var(--gold);
+margin:1.4rem 0 .3rem}
+.sub{color:var(--mut);font-size:.92rem;margin:.15rem 0}a{color:#58a6ff;
+text-decoration:none}a:hover{text-decoration:underline}
+.ic{width:1.4rem;height:1.4rem;stroke:var(--gold);fill:none;stroke-width:1.8;
+stroke-linecap:round;stroke-linejoin:round;flex:none}
+.counts{display:flex;gap:.75rem;margin:1.1rem 0}
+.counts div{background:var(--panel);border:1px solid var(--line);
+border-radius:10px;padding:.7rem 1rem;flex:1;text-align:center}
+.counts b{font-size:1.6rem;font-weight:800;color:var(--gold);display:block;
+letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.counts div small,.counts div{font-size:.76rem;color:var(--mut);
+text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--gold);height:6px}
+.row{display:flex;align-items:center;gap:.7rem;margin:.35rem 0;
+background:var(--panel);border:1px solid var(--line);border-radius:9px;
+padding:.55rem .9rem;transition:all .4s}
+.row.new{border-color:#3fb950;box-shadow:0 0 0 1px #3fb950}
+.bar{height:9px;border-radius:5px;
+background:linear-gradient(90deg,#e0873a,#f0b429);transition:width .5s}
+.nm{width:158px;font-weight:600;font-size:.9rem}
+.sc{width:44px;color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-mem" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/><rect x="10" y="10" width="4" height="4" rx="1"/></symbol>
+</defs></svg>
+<h1><svg class="ic"><use href="#i-mem"/></svg>Memory Replay</h1>
+<p class="sub"><a href="/">&larr; back to ops dashboard</a></p>
+<div style="background:#161b22;border:1px solid #30363d;border-radius:10px;
+padding:1rem 1.2rem;margin:1rem 0;line-height:1.5">
+<b style="color:#f0b429">What am I looking at?</b><br>
+Each time the investigator agent finishes a work session, it saves a complete
+copy of its memory &mdash; every hypothesis, finding, piece of evidence, and
+suspect score &mdash; from CockroachDB to Amazon S3. Each of those saved copies
+is one <b>frame</b> below. <b>Drag the slider</b> to move backward and forward
+through the investigation's history and watch the agent's thinking evolve:
+<ul style="margin:.5rem 0 0 1rem;color:#8b949e">
+<li>The <b>counters</b> show how much the agent had discovered by that point in
+time (hypotheses it was pursuing, findings it recorded, evidence it collected).</li>
+<li>Each <b>bar</b> is one suspect; its length and number are that person's
+guilt score <i>at that moment</i>. Watch scores rise as evidence accumulates.</li>
+<li>A <b style="color:#3fb950">green-outlined</b> row is a suspect who first
+appears in this frame &mdash; a new lead the agent just uncovered.</li>
+<li>Hover a row to read the agent's reasoning recorded at that time.</li>
+</ul>
+This is only possible because the agent's memory <i>persists</i> in
+CockroachDB. A stateless chatbot would have nothing to replay.</div>
+<div class="counts">
+ <div><b id="fi">-</b>frame (session snapshot)</div>
+ <div class="tab" data-t="hy"><b id="hy">-</b>hypotheses</div>
+ <div class="tab" data-t="fn"><b id="fn">-</b>findings</div>
+ <div class="tab" data-t="ev"><b id="ev">-</b>evidence</div>
+</div>
+<input type="range" id="scrub" min="0" value="0" step="1">
+<p class="sub" id="ts"></p>
+<h3 style="color:#f0b429;margin:.6rem 0 .2rem">Suspect board</h3>
+<div id="board"></div>
+<h3 style="color:#f0b429;margin:1rem 0 .2rem" id="dtitle">Hypotheses</h3>
+<p class="sub" style="margin:.1rem 0 .5rem">Click the tiles above to switch
+between the agent's hypotheses, findings, and the evidence it collected by this
+point in the investigation.</p>
+<div id="detail"></div>
+<style>
+.tab{cursor:pointer;transition:border-color .2s}.tab:hover{border-color:#f0b429}
+.tab.sel{border-color:#f0b429;box-shadow:0 0 0 1px #f0b429}
+.item{background:#161b22;border:1px solid #30363d;border-radius:8px;
+padding:.6rem .8rem;margin:.4rem 0}
+.item .meta{color:#8b949e;font-size:.8rem;margin-bottom:.2rem}
+.badge{display:inline-block;padding:.05rem .5rem;border-radius:10px;
+font-size:.72rem;font-weight:700}
+.sup{background:#193a24;color:#3fb950}.ref{background:#3a1d1d;color:#f77}
+.opn{background:#2b2f36;color:#c9d1d9}
+.ev{font-family:ui-monospace,monospace;font-size:.82rem;color:#c9d1d9;
+white-space:pre-wrap}
+</style>
+<script>
+let F=[],TAB='hy';
+fetch('api/replay').then(r=>r.json()).then(d=>{
+  F=d; const s=document.getElementById('scrub');
+  s.max=F.length-1; s.value=F.length-1;
+  s.oninput=()=>render(+s.value);
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    TAB=t.dataset.t;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('sel'));
+    t.classList.add('sel'); render(+s.value);});
+  document.querySelector('.tab[data-t=hy]').classList.add('sel');
+  render(F.length-1);
+});
+function esc(x){return (x||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function render(i){
+  const f=F[i], prev=i>0?F[i-1]:{board:[]};
+  const pn=new Set(prev.board.map(b=>b.name));
+  document.getElementById('fi').textContent=(i+1)+'/'+F.length;
+  document.getElementById('hy').textContent=f.hypotheses.length;
+  document.getElementById('fn').textContent=f.findings.length;
+  document.getElementById('ev').textContent=f.evidence.length;
+  document.getElementById('ts').textContent='snapshot '+f.ts;
+  document.getElementById('board').innerHTML=f.board.map(b=>
+    '<div class="row'+(pn.has(b.name)?'':' new')+'" title="'+esc(b.why)+
+    '"><span class="nm">'+b.name+'</span><div class="bar" style="width:'+
+    (b.score*120)+'px"></div><span class="sc">'+b.score.toFixed(2)+
+    '</span></div>').join('');
+  const D=document.getElementById('detail'), T=document.getElementById('dtitle');
+  if(TAB=='hy'){T.textContent='Hypotheses ('+f.hypotheses.length+')';
+    D.innerHTML=f.hypotheses.map(h=>{
+      const c=h.status=='supported'?'sup':h.status=='refuted'?'ref':'opn';
+      return '<div class="item"><span class="badge '+c+'">'+h.status+
+      ' · '+h.confidence+'</span><div style="margin-top:.3rem">'+
+      esc(h.statement)+'</div></div>';}).join('')||'<p class="sub">none yet</p>';
+  }else if(TAB=='fn'){T.textContent='Findings ('+f.findings.length+')';
+    D.innerHTML=f.findings.map(x=>'<div class="item"><div class="meta">method: '+
+      esc(x.method)+'</div>'+esc(x.summary)+'</div>').join('')
+      ||'<p class="sub">none yet</p>';
+  }else{T.textContent='Evidence ('+f.evidence.length+')';
+    D.innerHTML=f.evidence.map(x=>'<div class="item"><div class="meta">'+
+      'email '+esc(x.email_id)+' · SHA-256 on record</div><div class="ev">'+
+      esc(x.excerpt)+'</div></div>').join('')||'<p class="sub">none yet</p>';}
+}
+</script><script>addEventListener('DOMContentLoaded',function(){setTimeout(function(){document.querySelectorAll('button').forEach(function(b){if(/refresh db stats/i.test(b.textContent))b.click();});},500);});</script></body></html>
