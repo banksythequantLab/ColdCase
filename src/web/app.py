@@ -258,6 +258,43 @@ def suspects():
         "findings": n_find, "evidence": n_ev, "sessions": n_sess})
 
 
+@app.get("/api/casefile")
+def casefile(name: str = "Fastow"):
+    """Unified cross-agent case file: ONE SQL statement spanning all five
+    agents' schemas in one CockroachDB database. The entwinement, live."""
+    sql = """
+    SELECT 'ColdCase' agent, concat('suspicion ',
+           round(s.suspicion_score::numeric,2)::string, ' -- ',
+           left(coalesce(s.rationale,''),90)) detail
+      FROM suspects s JOIN persons p USING(person_id)
+      WHERE p.full_name ILIKE %(n)s OR coalesce(p.real_name,'') ILIKE %(n)s
+    UNION ALL
+    SELECT 'Witness', left(st.claim,120)
+      FROM witness.contradictions c
+      JOIN witness.witnesses w ON w.witness_id=c.witness_id
+      JOIN witness.statements st ON st.statement_id=c.statement_id
+      WHERE w.full_name ILIKE %(n)s
+    UNION ALL
+    SELECT 'Chronicle', concat(e.event_date::string,'  ',e.description)
+      FROM chronicle.events e JOIN chronicle.event_actors a
+        ON a.event_id=e.event_id
+      WHERE a.actor ILIKE %(n)s AND e.active
+    UNION ALL
+    SELECT 'GapHunter', concat(g.target_key,' [',g.status,'] ',
+           coalesce(g.channel_hint,''))
+      FROM gaphunter.gaps g WHERE g.subject ILIKE %(n)s
+    ORDER BY 1"""
+    with db() as c:
+        rows = c.execute(sql, {"n": f"%{name}%"}).fetchall()
+        held = c.execute(
+            "SELECT count(*) FROM hold_docs WHERE held").fetchone()[0]
+    agents = {}
+    for agent, detail in rows:
+        agents.setdefault(agent, []).append(detail)
+    return JSONResponse({"name": name, "agents": agents, "held": held,
+                         "coldcase_hit": "ColdCase" in agents})
+
+
 PAGE = """<!doctype html><html><head><title>Cold Case Ops</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -324,6 +361,13 @@ text-decoration:none">
 memory &mdash; email and official SEC filings. The filings carry the
 related-party (LJM) disclosures the emails don't.</p>
 <div class="row" id="sources"></div>
+<h2><svg class="ic ic-h2"><use href="#i-net"/></svg>Unified case file</h2>
+<p class="sub">One SQL statement, five agents, one CockroachDB database. Pick a
+person and every agent's memory converges &mdash; or a gap is exposed. Fastow is
+the tell: the email-driven investigator never flagged him, yet the same query
+pulls his contradictions, timeline, and withheld documents from the other agents.</p>
+<div id="cfbtns" style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.6rem 0"></div>
+<div id="casefile"></div>
 <h2><svg class="ic ic-h2"><use href="#i-scan"/></svg>Suspect board</h2>
 <p class="sub" id="memstats"></p>
 <div id="board"></div>
@@ -477,9 +521,42 @@ async function sources(){
     'style="color:#58a6ff">CockroachDB</div><small style="text-transform:none">'+
     'joined by vector + SQL</small></div>';
 }
+const CFPEOPLE=['Skilling','Fastow','Lay','Causey','Kopper'];
+function cfBtns(active){
+  const box=document.getElementById('cfbtns'); box.innerHTML='';
+  CFPEOPLE.forEach(n=>{const b=document.createElement('button');b.textContent=n;
+    if(n===active){b.style.borderColor='#f0b429';b.style.color='#f0b429';}
+    b.onclick=()=>casefile(n); box.appendChild(b);});
+}
+async function casefile(name){
+  cfBtns(name);
+  const d=await (await fetch('api/casefile?name='+encodeURIComponent(name))).json();
+  const order=['ColdCase','Witness','Chronicle','GapHunter'];
+  const col={ColdCase:'#f85149',Witness:'#3fb950',Chronicle:'#d29922',GapHunter:'#58a6ff'};
+  let html='';
+  if(!d.coldcase_hit){
+    html+='<div class="card" style="background:#3a1d1d;border:1px solid #f85149">'+
+      '<b style="color:#f77">Cold Case alone missed '+name+'.</b> The same '+
+      'one-statement query still builds the case from the other agents below '+
+      '&mdash; the entwined CockroachDB memory caught what a single agent could not.</div>';
+  }
+  for(const ag of order){
+    const items=d.agents[ag]||[]; const miss=items.length===0;
+    html+='<div class="card" style="border-left:3px solid '+col[ag]+'">'+
+      '<div style="font-weight:700;color:'+col[ag]+'">'+ag+
+      (miss?' <span style="color:#8b949e;font-weight:400">&mdash; nothing</span>':'')+'</div>'+
+      items.map(x=>'<div style="font-size:.86rem;color:#c9d1d9;margin-top:.3rem">'+x+'</div>').join('')+
+      '</div>';
+  }
+  html+='<div class="card" style="border-left:3px solid #bc8cff">'+
+    '<div style="font-weight:700;color:#bc8cff">Hold Firewall</div>'+
+    '<div style="font-size:.86rem;color:#c9d1d9;margin-top:.3rem">litigation hold '+
+    'active on '+d.held+' responsive documents (SERIALIZABLE-protected)</div></div>';
+  document.getElementById('casefile').innerHTML=html;
+}
 tick(); setInterval(tick, 5000);
 board(); setInterval(board, 30000);
-sources();
+sources(); casefile('Fastow');
 leads(); setInterval(leads, 60000);
 trail(); setInterval(trail, 30000);
 setTimeout(drawGraph, 800);
